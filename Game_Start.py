@@ -511,7 +511,6 @@ while gamerun:
             camera.apply(sprite)
         all_sprites.draw(screen)
         all_sprites.update(event)
-        #pygame.draw.rect(screen, (255, 255, 255), (WIDTH // 2, HEIGHT // 2 , 50, 50))
     elif future:
         screen.fill((0, 0, 0))
         font = pygame.font.Font(None, 25)
