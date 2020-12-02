@@ -128,12 +128,20 @@ class Enemy(pygame.sprite.Sprite):
         self.cur_frame = 0
         self.image = self.frames_right[self.cur_frame]
         self.rect = self.image.get_rect()
-        self.rect.x = random.randint(700, 900)
-        self.rect.y = random.randint(200, 400)
+        #self.rect.x = random.randint(700, 900)
+        #self.rect.y = random.randint(200, 400)
+        while True:
+            rand_x = random.randint(0, floor.mask.get_size()[0])
+            rand_y = random.randint(0, floor.mask.get_size()[1])
+            if floor.mask.get_at((rand_x, rand_y)) == 1:
+                break
+        self.rect.x = rand_x
+        self.rect.y = rand_y
+
         self.vector = 1
         self.frame_count = 0
         self.health = 10
-        self.damage = 0.1
+        self.damage = 0.2
         # проверка на застой
         self.stand = True
 
@@ -159,7 +167,7 @@ class Enemy(pygame.sprite.Sprite):
 
     def update(self, *args):
         for elem in fireballs:
-            # проверяем попадает ли герой в область видимости врага
+            # проверяем попадает ли файербол во врага
             if self.rect.colliderect(elem):
                 self.health -= 5
                 elem.kill()
@@ -169,10 +177,10 @@ class Enemy(pygame.sprite.Sprite):
         # движение врагов
         if self.rect.colliderect(hero):
             hero.change_health(-self.damage)
-        if ((self.rect.x - hero.rect.x) ** 2 + (self.rect.y - hero.rect.y) ** 2) < 50000 and not self.rect.colliderect(
+        if ((self.rect.x - hero.rect.x) ** 2 + (self.rect.y - hero.rect.y) ** 2) < 100000 and not self.rect.colliderect(
                 hero):
             self.stand = False
-            self.v = 3
+            self.v = 2
             x1 = (self.rect.x + self.v - hero.rect.x) ** 2 + (self.rect.y - hero.rect.y) ** 2
             x2 = (self.rect.x - self.v - hero.rect.x) ** 2 + (self.rect.y - hero.rect.y) ** 2
             y1 = (self.rect.y + self.v - hero.rect.y) ** 2 + (self.rect.x - hero.rect.x) ** 2
