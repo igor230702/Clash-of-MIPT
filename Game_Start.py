@@ -132,6 +132,8 @@ class Enemy(pygame.sprite.Sprite):
         self.rect.y = random.randint(200, 400)
         self.vector = 1
         self.frame_count = 0
+        self.health = 10
+        self.damage = 0.1
         # проверка на застой
         self.stand = True
 
@@ -159,9 +161,14 @@ class Enemy(pygame.sprite.Sprite):
         for elem in fireballs:
             # проверяем попадает ли герой в область видимости врага
             if self.rect.colliderect(elem):
-                self.kill()
+                self.health -= 5
                 elem.kill()
+                if self.health <= 0:
+                    self.kill()
+
         # движение врагов
+        if self.rect.colliderect(hero):
+            hero.change_health(-self.damage)
         if ((self.rect.x - hero.rect.x) ** 2 + (self.rect.y - hero.rect.y) ** 2) < 50000 and not self.rect.colliderect(
                 hero):
             self.stand = False
@@ -186,7 +193,6 @@ class Enemy(pygame.sprite.Sprite):
 
         if self.frame_count % 5 == 0 and not self.stand:
             self.cur_frame = (self.cur_frame + 1) % len(self.frames_right)
-            print(len(self.frames_right))
             if self.vector == 1:
                 self.image = self.frames_right[self.cur_frame]
             elif self.vector == 2:
@@ -196,6 +202,7 @@ class Enemy(pygame.sprite.Sprite):
             elif self.vector == 4:
                 self.image = self.frames_up[self.cur_frame]
         self.frame_count += 1
+        pygame.draw.rect(screen, (255, 0, 0), (self.rect.x, self.rect.y, 5 * int(self.health), 5))
 
         self.stand = True
 
@@ -224,6 +231,7 @@ class MainHero(pygame.sprite.Sprite):
         self.vector = 1
         self.vector_left_right = 1
         self.vector_stand = 1
+        self.health = 100
         # проверка на остановку
         self.stand = True
         # чтобы перс не застрявал в верхних стенах
@@ -231,6 +239,7 @@ class MainHero(pygame.sprite.Sprite):
 
     def update(self, *args):
         buttons = pygame.key.get_pressed()
+        pygame.draw.rect(screen, (255, 0, 0), (WIDTH - 130, 20, int(hero.health), 10))
         if buttons[pygame.K_UP]:  # and not pygame.sprite.collide_mask(self, walls):
             self.vector = 3
             self.rect.y -= 3
@@ -328,6 +337,10 @@ class MainHero(pygame.sprite.Sprite):
 
     def fire(self):
         FireBall(self.rect.x, self.rect.y, self.vector, all_sprites, fireballs)
+    def change_health(self, value):
+        self.health += value
+        if self.health < 0:
+            self.health = 0
 
 
 class Walls(pygame.sprite.Sprite):
@@ -511,6 +524,7 @@ while gamerun:
             camera.apply(sprite)
         all_sprites.draw(screen)
         all_sprites.update(event)
+
     elif future:
         screen.fill((0, 0, 0))
         font = pygame.font.Font(None, 25)
