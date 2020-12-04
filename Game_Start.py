@@ -253,6 +253,7 @@ class MainHero(pygame.sprite.Sprite):
         self.vector_left_right = 1
         self.vector_stand = 1
         self.health = 100
+        self.manna = 100
         # проверка на остановку
         self.stand = True
         # чтобы перс не застрявал в верхних стенах
@@ -265,11 +266,12 @@ class MainHero(pygame.sprite.Sprite):
     def update(self, *args):
         buttons = pygame.key.get_pressed()
         pygame.draw.rect(screen, (255, 0, 0), (WIDTH - 130, 20, int(hero.health), 10))
-        if buttons[pygame.K_SPACE]:
+        pygame.draw.rect(screen, (0, 0, 255), (WIDTH - 130, 40, int(hero.manna), 10))
+        if buttons[pygame.K_SPACE] and (self.manna >= 10):
             self.is_shouting = True
         else:
             self.is_shouting = False
-        if buttons[pygame.K_e]:
+        if buttons[pygame.K_e] and (self.manna >= 5):
             self.is_kicking = True
         else:
             self.is_kicking = False
@@ -306,6 +308,10 @@ class MainHero(pygame.sprite.Sprite):
                 self.stand = False
 
         if self.frame_count % 5 == 0:
+            #должны быть коректная проверка принадлежности области для подьема хп
+            if (abs(self.rect.x - 300) <= 200) and (abs(self.rect.y - 800) <= 200):
+                hero.change_health(0.5)
+            hero.change_manna(0.2)
             if not self.is_shouting and not self.is_kicking:
                 if not self.stand:
                     if self.vector_left_right == 1:
@@ -322,6 +328,7 @@ class MainHero(pygame.sprite.Sprite):
                         self.cur_frame = (self.cur_frame + 1) % len(self.frames_left)
                         self.image = self.frames_stand_left[self.cur_frame]
             elif self.is_shouting and not self.is_kicking:
+                hero.change_manna(-10)
                 if not self.stand:
                     if self.vector_left_right == 1:
                         self.cur_frame = (self.cur_frame + 1) % len(self.frames_right_shouting)
@@ -337,6 +344,7 @@ class MainHero(pygame.sprite.Sprite):
                         self.cur_frame = (self.cur_frame + 1) % len(self.frames_left)
                         self.image = self.frames_stand_left[self.cur_frame]
             else:
+                hero.change_manna(-5)
                 if not self.stand:
                     if self.vector_left_right == 1:
                         self.cur_frame = (self.cur_frame + 1) % len(self.frames_right_kicking)
@@ -358,11 +366,22 @@ class MainHero(pygame.sprite.Sprite):
         self.frame_count += 1
 
     def fire(self):
-        FireBall(self.rect.x, self.rect.y, self.vector, all_sprites, fireballs)
+        FireBall(self.rect.x+20, self.rect.y-5, self.vector, all_sprites, fireballs)
     def change_health(self, value):
-        self.health += value
-        if self.health < 0:
+        if (self.health + value <= 100) and (self.health + value >= 0):
+            self.health += value
+        elif (self.health + value <= 0):
             self.health = 0
+        else:
+            self.health = 100
+    def change_manna(self,value):
+        if (self.manna + value<= 100) and (self.manna + value >= 0):
+            self.manna += value
+        elif self.manna + value <= 0:
+            self.manna = 0
+        else:
+            self.manna = 100
+
 
 
 class Walls(pygame.sprite.Sprite):
@@ -552,7 +571,7 @@ while gamerun:
                 lvl = False
                 gamerun = False
             if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_SPACE:
+                if (event.key == pygame.K_SPACE and hero.manna >= 10):
                     hero.fire()
 
         screen.fill((0, 0, 0))
