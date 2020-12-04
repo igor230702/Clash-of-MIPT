@@ -1,7 +1,7 @@
 import pygame
 import random
 from constants import LABELS, Frases, SCREENSIZE, WIDTH, HEIGHT
-
+# проверка связи
 pygame.init()
 screen = pygame.display.set_mode(SCREENSIZE)  # , pygame.FULLSCREEN
 clock = pygame.time.Clock()
