@@ -228,12 +228,14 @@ class MainHero(pygame.sprite.Sprite):
     2. стреляет фаерболлами"""
     image = load_image("hero.png")
 
-    def __init__(self, frames_right, frames_left, frames_stand_left, frames_stand_right, start_pos, *groups):
+    def __init__(self, frames_right, frames_left, frames_stand_left, frames_stand_right, frames_left_shouting,frames_right_shouting, start_pos, *groups):
         super().__init__(*groups)
         self.frames_right = frames_right
         self.frames_left = frames_left
         self.frames_stand_left = frames_stand_left
         self.frames_stand_right = frames_stand_right
+        self.frames_right_shouting = frames_right_shouting
+        self.frames_left_shouting = frames_left_shouting
         self.cur_frame = 0
         self.frame_count = 0
         self.image = self.frames_right[self.cur_frame]
@@ -253,10 +255,16 @@ class MainHero(pygame.sprite.Sprite):
         self.stand = True
         # чтобы перс не застрявал в верхних стенах
         self.in_wall_prison = False
+        # проверка на стрельбу
+        self.is_shouting = False
 
     def update(self, *args):
         buttons = pygame.key.get_pressed()
         pygame.draw.rect(screen, (255, 0, 0), (WIDTH - 130, 20, int(hero.health), 10))
+        if buttons[pygame.K_SPACE]:
+            self.is_shouting = True
+        else:
+            self.is_shouting = False
         if buttons[pygame.K_UP]:
             self.vector = 3
             self.rect.y -= self.v
@@ -290,20 +298,36 @@ class MainHero(pygame.sprite.Sprite):
                 self.stand = False
 
         if self.frame_count % 5 == 0:
-            if not self.stand:
-                if self.vector_left_right == 1:
-                    self.cur_frame = (self.cur_frame + 1) % len(self.frames_right)
-                    self.image = self.frames_right[self.cur_frame]
-                if self.vector_left_right == 2:
-                    self.cur_frame = (self.cur_frame + 1) % len(self.frames_left)
-                    self.image = self.frames_left[self.cur_frame]
+            if not self.is_shouting:
+                if not self.stand:
+                    if self.vector_left_right == 1:
+                        self.cur_frame = (self.cur_frame + 1) % len(self.frames_right)
+                        self.image = self.frames_right[self.cur_frame]
+                    if self.vector_left_right == 2:
+                        self.cur_frame = (self.cur_frame + 1) % len(self.frames_left)
+                        self.image = self.frames_left[self.cur_frame]
+                else:
+                    if self.vector_left_right == 1:
+                        self.cur_frame = (self.cur_frame + 1) % len(self.frames_right)
+                        self.image = self.frames_stand_right[self.cur_frame]
+                    if self.vector_left_right == 2:
+                        self.cur_frame = (self.cur_frame + 1) % len(self.frames_left)
+                        self.image = self.frames_stand_left[self.cur_frame]
             else:
-                if self.vector_left_right == 1:
-                    self.cur_frame = (self.cur_frame + 1) % len(self.frames_right)
-                    self.image = self.frames_stand_right[self.cur_frame]
-                if self.vector_left_right == 2:
-                    self.cur_frame = (self.cur_frame + 1) % len(self.frames_left)
-                    self.image = self.frames_stand_left[self.cur_frame]
+                if not self.stand:
+                    if self.vector_left_right == 1:
+                        self.cur_frame = (self.cur_frame + 1) % len(self.frames_right_shouting)
+                        self.image = self.frames_right_shouting[self.cur_frame]
+                    if self.vector_left_right == 2:
+                        self.cur_frame = (self.cur_frame + 1) % len(self.frames_left_shouting)
+                        self.image = self.frames_left_shouting[self.cur_frame]
+                else:
+                    if self.vector_left_right == 1:
+                        self.cur_frame = (self.cur_frame + 1) % len(self.frames_right)
+                        self.image = self.frames_stand_right[self.cur_frame]
+                    if self.vector_left_right == 2:
+                        self.cur_frame = (self.cur_frame + 1) % len(self.frames_left)
+                        self.image = self.frames_stand_left[self.cur_frame]
 
 
         if not (buttons[pygame.K_UP] or buttons[pygame.K_DOWN] or buttons[pygame.K_RIGHT] or buttons[pygame.K_LEFT]):
@@ -477,7 +501,17 @@ while gamerun:
                              load_image("stait_vpravo02.png"), load_image("stait_vpravo03.png"),
                              load_image("stait_vpravo04.png"), load_image("stait_vpravo14.png"),
                              load_image("stait_vpravo15.png"), load_image("stait_vpravo16.png"),
-                             load_image("stait_vpravo17.png")], (800, 300),
+                             load_image("stait_vpravo17.png")],
+                            [load_image("bomzh_vlevo_shout0.png"), load_image("bomzh_vlevo_shout1.png"),
+                             load_image("bomzh_vlevo_shout2.png"), load_image("bomzh_vlevo_shout3.png"),
+                             load_image("bomzh_vlevo_shout4.png"), load_image("bomzh_vlevo_shout5.png"),
+                             load_image("bomzh_vlevo_shout6.png"), load_image("bomzh_vlevo_shout7.png")],
+                            [load_image("bomzh_vprapo_shout0.png"), load_image("bomzh_vprapo_shout1.png"),
+                             load_image("bomzh_vprapo_shout2.png"), load_image("bomzh_vprapo_shout3.png"),
+                             load_image("bomzh_vprapo_shout4.png"), load_image("bomzh_vprapo_shout5.png"),
+                             load_image("bomzh_vprapo_shout6.png"),
+                             load_image("bomzh_vprapo_shout7.png")],
+                            (800, 300),
                             all_sprites)
             for i in range(5):
                 Enemy(load_image("bloody_zombie-NESW.png"), 3, 4, all_sprites, enemy_group)
