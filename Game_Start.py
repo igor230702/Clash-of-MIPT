@@ -189,7 +189,11 @@ class Enemy(pygame.sprite.Sprite):
                     self.rect.x -= ok["dx"]
                     self.rect.y -= ok["dy"]
                     # ищем другое допустимое перемещение
-                    optimal_way([elem for elem in ar if elem != ok])
+                    ways = [elem for elem in ar if elem != ok]
+                    if ways:
+                        optimal_way(ways)
+                    else:
+                        return
 
                 else:
                     # выходим из рекурсии, когда такое перемещение найдено
