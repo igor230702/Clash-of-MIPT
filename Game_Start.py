@@ -99,7 +99,6 @@ class Enemy(pygame.sprite.Sprite):
         super().__init__(*groups)
         # скорость врага
         self.v = 0
-        # складываем анимации движений врагов в разные стороны в соответствующие списки
         self.frames_right = []
         self.frames_left = []
         self.frames_up = []
@@ -107,14 +106,19 @@ class Enemy(pygame.sprite.Sprite):
         self.cut_sheet(sheet, columns, rows)
         self.cur_frame = 0
         self.image = self.frames_right[self.cur_frame]
-        self.mask = pygame.mask.from_surface(self.image)
         self.rect = self.image.get_rect()
-        self.rect.x = random.randint(700, 900)
-        self.rect.y = random.randint(200, 400)
+        while True:
+            rand_x = random.randint(0, floor.mask.get_size()[0])
+            rand_y = random.randint(0, floor.mask.get_size()[1])
+            if floor.mask.get_at((rand_x, rand_y)) == 1:
+                break
+        self.rect.x = rand_x
+        self.rect.y = rand_y
+
         self.vector = 1
         self.frame_count = 0
         self.health = 10
-        self.damage = 0.1
+        self.damage = 0.2
         # проверка на застой
         self.stand = True
 
@@ -233,6 +237,8 @@ class MainHero(pygame.sprite.Sprite):
         self.rect.x = start_pos[0]
         self.rect.y = start_pos[1]
         self.mask = pygame.mask.from_surface(self.image)
+        #self.mask = pygame.mask.from_surface(pygame.Surface((self.rect.width, self.rect.height), pygame.SRCALPHA))
+        #self.mask = self.rect
         self.vector = 1
         # скорость гг
         self.v = 5
@@ -502,4 +508,3 @@ while gamerun:
     pygame.display.flip()
     clock.tick(fps)
 pygame.quit()
-#############
