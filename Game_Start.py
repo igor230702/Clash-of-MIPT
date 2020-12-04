@@ -177,7 +177,10 @@ class Enemy(pygame.sprite.Sprite):
         # движение врагов
         if self.rect.colliderect(hero):
             hero.change_health(-self.damage)
-        if ((self.rect.x - hero.rect.x) ** 2 + (self.rect.y - hero.rect.y) ** 2) < 100000 and not self.rect.colliderect(
+            dx = (self.rect.x - hero.rect.x)
+            
+            dy = (self.rect.y - hero.rect.y)
+        if (dx ** 2 +  dy ** 2) < 100000 and not self.rect.colliderect(
                 hero):
             self.stand = False
             self.v = 2
@@ -187,6 +190,7 @@ class Enemy(pygame.sprite.Sprite):
             y2 = (self.rect.y - self.v - hero.rect.y) ** 2 + (self.rect.x - hero.rect.x) ** 2
             ok = min([x1, x2, y1, y2])
             if ok == x1:
+
                 self.rect.x += self.v
                 self.vector = 1
             elif ok == x2:
