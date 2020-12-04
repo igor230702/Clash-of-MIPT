@@ -63,7 +63,7 @@ screen_rect = (0, 0, WIDTH, HEIGHT)
 class FireBall(pygame.sprite.Sprite):
     """Фаерболлы. Что умеют:
     при попадании во врага убивают его и исчезают"""
-    image = pygame.transform.scale(load_image("fireball.png"), (20, 20))
+    image = pygame.transform.scale(load_image("fireball_new.png"), (20, 20))
 
     def __init__(self, x, y, vector, *groups):
         super().__init__(*groups)
@@ -228,7 +228,7 @@ class MainHero(pygame.sprite.Sprite):
     2. стреляет фаерболлами"""
     image = load_image("hero.png")
 
-    def __init__(self, frames_right, frames_left, frames_stand_left, frames_stand_right, frames_left_shouting,frames_right_shouting, start_pos, *groups):
+    def __init__(self, frames_right, frames_left, frames_stand_left, frames_stand_right, frames_left_shouting,frames_right_shouting, frames_left_kicking,frames_right_kicking, start_pos, *groups):
         super().__init__(*groups)
         self.frames_right = frames_right
         self.frames_left = frames_left
@@ -236,6 +236,8 @@ class MainHero(pygame.sprite.Sprite):
         self.frames_stand_right = frames_stand_right
         self.frames_right_shouting = frames_right_shouting
         self.frames_left_shouting = frames_left_shouting
+        self.frames_right_kicking = frames_right_kicking
+        self.frames_left_kicking = frames_left_kicking
         self.cur_frame = 0
         self.frame_count = 0
         self.image = self.frames_right[self.cur_frame]
@@ -257,6 +259,8 @@ class MainHero(pygame.sprite.Sprite):
         self.in_wall_prison = False
         # проверка на стрельбу
         self.is_shouting = False
+        #проверка на рукопашку
+        self.is_kicking = False
 
     def update(self, *args):
         buttons = pygame.key.get_pressed()
@@ -265,6 +269,10 @@ class MainHero(pygame.sprite.Sprite):
             self.is_shouting = True
         else:
             self.is_shouting = False
+        if buttons[pygame.K_e]:
+            self.is_kicking = True
+        else:
+            self.is_kicking = False
         if buttons[pygame.K_UP]:
             self.vector = 3
             self.rect.y -= self.v
@@ -298,7 +306,7 @@ class MainHero(pygame.sprite.Sprite):
                 self.stand = False
 
         if self.frame_count % 5 == 0:
-            if not self.is_shouting:
+            if not self.is_shouting and not self.is_kicking:
                 if not self.stand:
                     if self.vector_left_right == 1:
                         self.cur_frame = (self.cur_frame + 1) % len(self.frames_right)
@@ -313,7 +321,7 @@ class MainHero(pygame.sprite.Sprite):
                     if self.vector_left_right == 2:
                         self.cur_frame = (self.cur_frame + 1) % len(self.frames_left)
                         self.image = self.frames_stand_left[self.cur_frame]
-            else:
+            elif self.is_shouting and not self.is_kicking:
                 if not self.stand:
                     if self.vector_left_right == 1:
                         self.cur_frame = (self.cur_frame + 1) % len(self.frames_right_shouting)
@@ -321,6 +329,21 @@ class MainHero(pygame.sprite.Sprite):
                     if self.vector_left_right == 2:
                         self.cur_frame = (self.cur_frame + 1) % len(self.frames_left_shouting)
                         self.image = self.frames_left_shouting[self.cur_frame]
+                elif self.stand:
+                    if self.vector_left_right == 1:
+                        self.cur_frame = (self.cur_frame + 1) % len(self.frames_right)
+                        self.image = self.frames_stand_right[self.cur_frame]
+                    if self.vector_left_right == 2:
+                        self.cur_frame = (self.cur_frame + 1) % len(self.frames_left)
+                        self.image = self.frames_stand_left[self.cur_frame]
+            else:
+                if not self.stand:
+                    if self.vector_left_right == 1:
+                        self.cur_frame = (self.cur_frame + 1) % len(self.frames_right_kicking)
+                        self.image = self.frames_right_kicking[self.cur_frame]
+                    if self.vector_left_right == 2:
+                        self.cur_frame = (self.cur_frame + 1) % len(self.frames_left_kicking)
+                        self.image = self.frames_left_kicking[self.cur_frame]
                 else:
                     if self.vector_left_right == 1:
                         self.cur_frame = (self.cur_frame + 1) % len(self.frames_right)
@@ -511,6 +534,15 @@ while gamerun:
                              load_image("bomzh_vprapo_shout4.png"), load_image("bomzh_vprapo_shout5.png"),
                              load_image("bomzh_vprapo_shout6.png"),
                              load_image("bomzh_vprapo_shout7.png")],
+                            [load_image("bomzh_vlevo_kick0.png"), load_image("bomzh_vlevo_kick1.png"),
+                             load_image("bomzh_vlevo_kick2.png"), load_image("bomzh_vlevo_kick3.png"),
+                             load_image("bomzh_vlevo_kick4.png"), load_image("bomzh_vlevo_kick5.png"),
+                             load_image("bomzh_vlevo_kick6.png"), load_image("bomzh_vlevo_kick7.png")],
+                            [load_image("bomzh_vprapo_kick0.png"), load_image("bomzh_vprapo_kick1.png"),
+                             load_image("bomzh_vprapo_kick2.png"), load_image("bomzh_vprapo_kick3.png"),
+                             load_image("bomzh_vprapo_kick4.png"), load_image("bomzh_vprapo_kick5.png"),
+                             load_image("bomzh_vprapo_kick6.png"),
+                             load_image("bomzh_vprapo_kick7.png")],
                             (800, 300),
                             all_sprites)
             for i in range(5):
