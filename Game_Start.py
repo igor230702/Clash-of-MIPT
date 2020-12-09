@@ -6,6 +6,10 @@ pygame.init()
 screen = pygame.display.set_mode(SCREENSIZE)  # , pygame.FULLSCREEN
 clock = pygame.time.Clock()
 pygame.display.set_caption('Super Game')
+manna_upper_coordinates = [(804, 310),(-73, 500)]
+health_upper_coordinates = [(1720, 260)]
+manna_upper_real_coordinates = [(410,250),(-430, 447)]
+health_upper_real_coordinates = [(1312,187)]
 
 
 def load_image(name):
@@ -150,6 +154,7 @@ class Enemy(pygame.sprite.Sprite):
                 elem.kill()
                 if self.health <= 0:
                     self.kill()
+                    hero.gold += 5
 
         # наносим урон герою
         if self.rect.colliderect(hero):
@@ -240,10 +245,12 @@ class MainHero(pygame.sprite.Sprite):
         self.frames_left_kicking = frames_left_kicking
         self.cur_frame = 0
         self.frame_count = 0
+        self.gold = 0
         self.image = self.frames_right[self.cur_frame]
         self.rect = self.image.get_rect()
         self.rect.x = start_pos[0]
         self.rect.y = start_pos[1]
+        self.realx = self.realy = 0
         self.mask = pygame.mask.from_surface(self.image)
         #self.mask = pygame.mask.from_surface(pygame.Surface((self.rect.width, self.rect.height), pygame.SRCALPHA))
         #self.mask = self.rect
@@ -308,10 +315,14 @@ class MainHero(pygame.sprite.Sprite):
                 self.stand = False
 
         if self.frame_count % 5 == 0:
-            #должны быть коректная проверка принадлежности области для подьема хп
-            if (abs(self.rect.x - 300) <= 200) and (abs(self.rect.y - 800) <= 200):
-                hero.change_health(0.5)
             hero.change_manna(0.2)
+            for i in manna_upper_real_coordinates:
+                if ((hero.realx) - (i[0])) ** 2 + ((hero.realy) - (i[1])) ** 2 < 10000:
+                    hero.change_manna(0.5)
+            for i in health_upper_real_coordinates:
+                if ((hero.realx) - (i[0])) ** 2 + ((hero.realy) - (i[1])) ** 2 < 10000:
+                    hero.change_health(0.5)
+
             if not self.is_shouting and not self.is_kicking:
                 if not self.stand:
                     if self.vector_left_right == 1:
@@ -400,6 +411,16 @@ class Walls(pygame.sprite.Sprite):
     def update(self, *args):
         # камон, это же стены
         pass
+class Tree(pygame.sprite.Sprite):
+    def __init__(self, tree_image, coords, *groups):
+        super().__init__(*groups)
+        self.image = tree_image
+        self.rect = self.image.get_rect()
+        self.rect.x = coords[0]
+        self.rect.y = coords[1]
+    def update(self, *args):
+        # камон, это же стены(деревья)
+        pass
 
 
 class Floor(pygame.sprite.Sprite):
@@ -429,6 +450,9 @@ class Camera:
     def apply(self, obj):
         obj.rect.x += self.dx
         obj.rect.y += self.dy
+        if obj is hero:
+            hero.realx -= self.dx
+            hero.realy -= self.dy
 
     # позиционировать камеру на объекте target
     def update(self, *args):
@@ -454,6 +478,7 @@ camera = Camera()
 all_sprites = pygame.sprite.Group()
 enemy_group = pygame.sprite.Group()
 fireballs = pygame.sprite.Group()
+objects = pygame.sprite.Group()
 
 k = 0
 fps = 60
@@ -566,6 +591,10 @@ while gamerun:
                             all_sprites)
             for i in range(5):
                 Enemy(load_image("bloody_zombie-NESW.png"), 3, 4, all_sprites, enemy_group)
+            for i in manna_upper_coordinates:
+                Tree(pygame.transform.scale(load_image("manna_upper.png"), (234, 275)), i, all_sprites, objects)
+            for i in health_upper_coordinates:
+                Tree(pygame.transform.scale(load_image("health_upper.png"), (177, 273)), i, all_sprites, objects)
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 lvl = False
