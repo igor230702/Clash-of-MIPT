@@ -164,9 +164,10 @@ class Enemy(pygame.sprite.Sprite):
             hero.change_health(-self.damage)
 
         # движение врагов
-        if ((self.rect.x - hero.rect.x) ** 2 + (self.rect.y - hero.rect.y) ** 2) < 400**2 and not self.rect.colliderect(
+        if ((self.rect.x - hero.rect.x) ** 2 + (
+                self.rect.y - hero.rect.y) ** 2) < 400 ** 2 and not self.rect.colliderect(
                 hero):
-            self.v = 3
+            self.v = 4
             # задаем 4 возможных направления передвижений зомби
             x1 = {"distance": (self.rect.x + self.v - hero.rect.x) ** 2 + (self.rect.y - hero.rect.y) ** 2,
                   "vector": 1,
@@ -192,7 +193,12 @@ class Enemy(pygame.sprite.Sprite):
                 ok = min(ar, key=lambda i: i["distance"])
                 self.rect.x += ok["dx"]
                 self.rect.y += ok["dy"]
-                if pygame.sprite.collide_mask(self, walls): # проверяем его на пригодность
+                zomb_collision = False
+                for enemy in enemy_group:
+                    if (enemy != self and pygame.sprite.collide_mask(self, enemy)):
+                        zomb_collision = True
+                        break
+                if pygame.sprite.collide_mask(self, walls) or zomb_collision:  # проверяем его на пригодность
                     # если зомби зомби пересек спрайт стены, то отменяем действие
                     self.rect.x -= ok["dx"]
                     self.rect.y -= ok["dy"]
@@ -249,8 +255,8 @@ class MainHero(pygame.sprite.Sprite):
         self.rect.x = start_pos[0]
         self.rect.y = start_pos[1]
         self.mask = pygame.mask.from_surface(self.image)
-        #self.mask = pygame.mask.from_surface(pygame.Surface((self.rect.width, self.rect.height), pygame.SRCALPHA))
-        #self.mask = self.rect
+        # self.mask = pygame.mask.from_surface(pygame.Surface((self.rect.width, self.rect.height), pygame.SRCALPHA))
+        # self.mask = self.rect
         self.vector = 1
         # скорость гг
         self.v = 5
@@ -268,7 +274,7 @@ class MainHero(pygame.sprite.Sprite):
         if buttons[pygame.K_UP]:
             self.vector = 3
             self.rect.y -= self.v
-            if  pygame.sprite.collide_mask(self, walls):
+            if pygame.sprite.collide_mask(self, walls):
                 self.rect.y += self.v
             else:
                 self.stand = False
@@ -320,6 +326,7 @@ class MainHero(pygame.sprite.Sprite):
 
     def fire(self):
         FireBall(self.rect.x, self.rect.y, self.vector, all_sprites, fireballs)
+
     def change_health(self, value):
         self.health += value
         if self.health < 0:
@@ -329,7 +336,7 @@ class MainHero(pygame.sprite.Sprite):
 class Walls(pygame.sprite.Sprite):
     """"Тупо стены"""
     image = load_image('стены_1.png')
-    image_mask = load_image('стены_1(ok).png')###???
+    image_mask = load_image('стены_1(ok).png')  ###???
 
     def __init__(self, *groups):
         super().__init__(*groups)
@@ -408,7 +415,7 @@ dialog = False
 gamerun = True
 menu = True
 lvl = False
-#music('TownTheme.mp3')
+# music('TownTheme.mp3')
 fon = load_image('фон_1.png')
 walls = load_image('стены_1(new).png')
 # начальное положение фоновых объектов
@@ -520,3 +527,5 @@ while gamerun:
     pygame.display.flip()
     clock.tick(fps)
 pygame.quit()
+
+######
