@@ -107,13 +107,21 @@ class Enemy(pygame.sprite.Sprite):
         self.cur_frame = 0
         self.image = self.frames_right[self.cur_frame]
         self.rect = self.image.get_rect()
+        w = self.rect.w
+        h = self.rect.h
+
         while True:
-            rand_x = random.randint(0, floor.mask.get_size()[0])
-            rand_y = random.randint(0, floor.mask.get_size()[1])
-            if floor.mask.get_at((rand_x, rand_y)) == 1:
+            rand_x = random.randint(w, floor.mask.get_size()[0] - w)
+            rand_y = random.randint(h, floor.mask.get_size()[1] - h)
+            ok = 1
+            corners = ((rand_x, rand_y), (rand_x + w, rand_y), (rand_x, rand_y + h), (rand_x + w, rand_y + h))
+            for corner in corners:
+                ok *= floor.mask.get_at(corner)
+            if ok == 1:
                 break
         self.rect.x = rand_x
         self.rect.y = rand_y
+        self.mask = pygame.mask.from_surface(self.image)
 
         self.vector = 1
         self.frame_count = 0
