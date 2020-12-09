@@ -233,11 +233,15 @@ class MainHero(pygame.sprite.Sprite):
     2. стреляет фаерболлами"""
     image = load_image("hero.png")
 
-    def __init__(self, frames_right, frames_left, frames_stand_left, frames_stand_right, frames_left_shouting,frames_right_shouting, frames_left_kicking,frames_right_kicking, start_pos, *groups):
+    def __init__(self, frames_right, frames_left, frames_stand_left, frames_stand_right, frames_left_shouting,frames_right_shouting, frames_left_kicking,frames_right_kicking, frames_stand_left_shouting, frames_stand_right_shouting, frames_stand_left_kick, frames_stand_right_kick, start_pos, *groups):
         super().__init__(*groups)
         self.frames_right = frames_right
         self.frames_left = frames_left
         self.frames_stand_left = frames_stand_left
+        self.frames_stand_right_shouting = frames_stand_right_shouting
+        self.frames_stand_left_shouting = frames_stand_left_shouting
+        self.frames_stand_right_kick = frames_stand_right_kick
+        self.frames_stand_left_kick = frames_stand_left_kick
         self.frames_stand_right = frames_stand_right
         self.frames_right_shouting = frames_right_shouting
         self.frames_left_shouting = frames_left_shouting
@@ -350,10 +354,10 @@ class MainHero(pygame.sprite.Sprite):
                 elif self.stand:
                     if self.vector_left_right == 1:
                         self.cur_frame = (self.cur_frame + 1) % len(self.frames_right)
-                        self.image = self.frames_stand_right[self.cur_frame]
+                        self.image = self.frames_stand_right_shouting[self.cur_frame]
                     if self.vector_left_right == 2:
                         self.cur_frame = (self.cur_frame + 1) % len(self.frames_left)
-                        self.image = self.frames_stand_left[self.cur_frame]
+                        self.image = self.frames_stand_left_shouting[self.cur_frame]
             else:
                 hero.change_manna(-5)
                 if not self.stand:
@@ -366,10 +370,10 @@ class MainHero(pygame.sprite.Sprite):
                 else:
                     if self.vector_left_right == 1:
                         self.cur_frame = (self.cur_frame + 1) % len(self.frames_right)
-                        self.image = self.frames_stand_right[self.cur_frame]
+                        self.image = self.frames_stand_right_kick[self.cur_frame]
                     if self.vector_left_right == 2:
                         self.cur_frame = (self.cur_frame + 1) % len(self.frames_left)
-                        self.image = self.frames_stand_left[self.cur_frame]
+                        self.image = self.frames_stand_left_kick[self.cur_frame]
 
 
         if not (buttons[pygame.K_UP] or buttons[pygame.K_DOWN] or buttons[pygame.K_RIGHT] or buttons[pygame.K_LEFT]):
@@ -587,6 +591,26 @@ while gamerun:
                              load_image("bomzh_vprapo_kick4.png"), load_image("bomzh_vprapo_kick5.png"),
                              load_image("bomzh_vprapo_kick6.png"),
                              load_image("bomzh_vprapo_kick7.png")],
+                            [load_image("stait_vlevo_shout0.png"), load_image("stait_vlevo_shout1.png"),
+                             load_image("stait_vlevo_shout2.png"), load_image("stait_vlevo_shout3.png"),
+                             load_image("stait_vlevo_shout4.png"), load_image("stait_vlevo_shout5.png"),
+                             load_image("stait_vlevo_shout6.png"), load_image("stait_vlevo_shout7.png"),
+                             load_image("stait_vlevo_shout8.png")],
+                            [load_image("stait_vpravo_shout0.png"), load_image("stait_vpravo_shout1.png"),
+                             load_image("stait_vpravo_shout2.png"), load_image("stait_vpravo_shout3.png"),
+                             load_image("stait_vpravo_shout4.png"), load_image("stait_vpravo_shout5.png"),
+                             load_image("stait_vpravo_shout6.png"), load_image("stait_vpravo_shout7.png"),
+                             load_image("stait_vpravo_shout8.png")],
+                            [load_image("stait_vlevo_kick0.png"), load_image("stait_vlevo_kick1.png"),
+                             load_image("stait_vlevo_kick2.png"), load_image("stait_vlevo_kick3.png"),
+                             load_image("stait_vlevo_kick4.png"), load_image("stait_vlevo_kick5.png"),
+                             load_image("stait_vlevo_kick6.png"), load_image("stait_vlevo_kick7.png"),
+                             load_image("stait_vlevo_kick8.png")],
+                            [load_image("stait_vpravo_kick0.png"), load_image("stait_vpravo_kick1.png"),
+                             load_image("stait_vpravo_kick2.png"), load_image("stait_vpravo_kick3.png"),
+                             load_image("stait_vpravo_kick4.png"), load_image("stait_vpravo_kick5.png"),
+                             load_image("stait_vpravo_kick6.png"), load_image("stait_vpravo_kick7.png"),
+                             load_image("stait_vpravo_kick8.png")],
                             (800, 300),
                             all_sprites)
             for i in range(5):
