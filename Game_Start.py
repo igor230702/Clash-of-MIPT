@@ -9,6 +9,10 @@ pygame.init()
 screen = pygame.display.set_mode(SCREENSIZE)  # , pygame.FULLSCREEN
 clock = pygame.time.Clock()
 pygame.display.set_caption('Super Game')
+manna_upper_coordinates = [(804, 310),(-73, 500)]
+health_upper_coordinates = [(1720, 260)]
+manna_upper_real_coordinates = [(410,250),(-430, 447)]
+health_upper_real_coordinates = [(1312,187)]
 
 
 def load_image(name):
@@ -191,18 +195,25 @@ class Enemy(pygame.sprite.Sprite):
                 elif j == 3:
                     self.frames_left.append(sheet.subsurface(pygame.Rect(
                         frame_location, self.rect.size)))
+    def change_health(self, value):
+        self.health += value
+        if self.health <= 0:
+            self.kill()
+            hero.gold += 5
 
     def update(self, *args):
         # при попадании фаерболаа враг умирает
         for elem in fireballs:
             if self.rect.colliderect(elem):
-                self.health -= 5
                 elem.kill()
-                if self.health <= 0:
-                    self.kill()
+                self.change_health(-5)
+
+
         # наносим урон герою
         if self.rect.colliderect(hero):
             hero.change_health(-self.damage)
+            if hero.is_kicking:
+                self.change_health(-0.1)
         # движение врагов
         lx = self.rect.x - hero.rect.x
         ly = self.rect.y - hero.rect.y
@@ -448,20 +459,28 @@ class MainHero(pygame.sprite.Sprite):
     2. стреляет фаерболлами"""
     image = load_image("hero.png")
 
-    def __init__(self, frames_right, frames_left, frames_stand_left, frames_stand_right, frames_left_shouting,frames_right_shouting, start_pos, *groups):
+    def __init__(self, frames_right, frames_left, frames_stand_left, frames_stand_right, frames_left_shouting,frames_right_shouting, frames_left_kicking,frames_right_kicking, frames_stand_left_shouting, frames_stand_right_shouting, frames_stand_left_kick, frames_stand_right_kick, start_pos, *groups):
         super().__init__(*groups)
         self.frames_right = frames_right
         self.frames_left = frames_left
         self.frames_stand_left = frames_stand_left
+        self.frames_stand_right_shouting = frames_stand_right_shouting
+        self.frames_stand_left_shouting = frames_stand_left_shouting
+        self.frames_stand_right_kick = frames_stand_right_kick
+        self.frames_stand_left_kick = frames_stand_left_kick
         self.frames_stand_right = frames_stand_right
         self.frames_right_shouting = frames_right_shouting
         self.frames_left_shouting = frames_left_shouting
+        self.frames_right_kicking = frames_right_kicking
+        self.frames_left_kicking = frames_left_kicking
         self.cur_frame = 0
         self.frame_count = 0
+        self.gold = 0
         self.image = self.frames_right[self.cur_frame]
         self.rect = self.image.get_rect()
         self.rect.x = start_pos[0]
         self.rect.y = start_pos[1]
+        self.realx = self.realy = 0
         self.mask = pygame.mask.from_surface(self.image)
         #self.mask = pygame.mask.from_surface(pygame.Surface((self.rect.width, self.rect.height), pygame.SRCALPHA))
         #self.mask = self.rect
@@ -471,24 +490,32 @@ class MainHero(pygame.sprite.Sprite):
         self.vector_left_right = 1
         self.vector_stand = 1
         self.health = 100
+        self.manna = 100
         # проверка на остановку
         self.stand = True
         # чтобы перс не застрявал в верхних стенах
         self.in_wall_prison = False
         # проверка на стрельбу
         self.is_shouting = False
+        #проверка на рукопашку
+        self.is_kicking = False
 
     def update(self, *args):
 
         buttons = pygame.key.get_pressed()
         pygame.draw.rect(screen, (255, 255, 255), (WIDTH - 130, 20, 100, 10))
+        pygame.draw.rect(screen, (255, 255, 255), (WIDTH - 130, 40, 100, 10))
         pygame.draw.rect(screen, (255, 0, 0), (WIDTH - 130, 20, int(hero.health), 10))
-
-        if buttons[pygame.K_SPACE]:
+        pygame.draw.rect(screen, (0, 0, 255), (WIDTH - 130, 40, int(hero.manna), 10))
+        if pygame.mouse.get_pressed()[0] and (self.manna >= 10):
             self.is_shouting = True
         else:
             self.is_shouting = False
-        if buttons[pygame.K_UP]:
+        if buttons[pygame.K_e] and (self.manna >= 5):
+            self.is_kicking = True
+        else:
+            self.is_kicking = False
+        if buttons[pygame.K_w]:
             self.vector = 3
             self.rect.y -= self.v
             if  pygame.sprite.collide_mask(self, walls):
@@ -496,14 +523,14 @@ class MainHero(pygame.sprite.Sprite):
             else:
                 self.stand = False
 
-        if buttons[pygame.K_DOWN]:
+        if buttons[pygame.K_s]:
             self.vector = 4
             self.rect.y += self.v
             if pygame.sprite.collide_mask(self, walls):
                 self.rect.y -= self.v
             else:
                 self.stand = False
-        if buttons[pygame.K_RIGHT]:
+        if buttons[pygame.K_d]:
             self.vector = 1
             self.vector_left_right = 1
             self.rect.x += self.v
@@ -511,7 +538,7 @@ class MainHero(pygame.sprite.Sprite):
                 self.rect.x -= self.v
             else:
                 self.stand = False
-        if buttons[pygame.K_LEFT]:
+        if buttons[pygame.K_a]:
             self.vector = 2
             self.vector_left_right = 2
             self.rect.x -= self.v
@@ -521,7 +548,15 @@ class MainHero(pygame.sprite.Sprite):
                 self.stand = False
 
         if self.frame_count % 5 == 0:
-            if not self.is_shouting:
+            hero.change_manna(0.2)
+            for i in manna_upper_real_coordinates:
+                if ((hero.realx) - (i[0])) ** 2 + ((hero.realy) - (i[1])) ** 2 < 10000:
+                    hero.change_manna(0.5)
+            for i in health_upper_real_coordinates:
+                if ((hero.realx) - (i[0])) ** 2 + ((hero.realy) - (i[1])) ** 2 < 10000:
+                    hero.change_health(0.5)
+
+            if not self.is_shouting and not self.is_kicking:
                 if not self.stand:
                     if self.vector_left_right == 1:
                         self.cur_frame = (self.cur_frame + 1) % len(self.frames_right)
@@ -536,7 +571,8 @@ class MainHero(pygame.sprite.Sprite):
                     if self.vector_left_right == 2:
                         self.cur_frame = (self.cur_frame + 1) % len(self.frames_left)
                         self.image = self.frames_stand_left[self.cur_frame]
-            else:
+            elif self.is_shouting and not self.is_kicking:
+
                 if not self.stand:
                     if self.vector_left_right == 1:
                         self.cur_frame = (self.cur_frame + 1) % len(self.frames_right_shouting)
@@ -544,13 +580,29 @@ class MainHero(pygame.sprite.Sprite):
                     if self.vector_left_right == 2:
                         self.cur_frame = (self.cur_frame + 1) % len(self.frames_left_shouting)
                         self.image = self.frames_left_shouting[self.cur_frame]
+                elif self.stand:
+                    if self.vector_left_right == 1:
+                        self.cur_frame = (self.cur_frame + 1) % len(self.frames_right)
+                        self.image = self.frames_stand_right_shouting[self.cur_frame]
+                    if self.vector_left_right == 2:
+                        self.cur_frame = (self.cur_frame + 1) % len(self.frames_left)
+                        self.image = self.frames_stand_left_shouting[self.cur_frame]
+            else:
+                hero.change_manna(-5)
+                if not self.stand:
+                    if self.vector_left_right == 1:
+                        self.cur_frame = (self.cur_frame + 1) % len(self.frames_right_kicking)
+                        self.image = self.frames_right_kicking[self.cur_frame]
+                    if self.vector_left_right == 2:
+                        self.cur_frame = (self.cur_frame + 1) % len(self.frames_left_kicking)
+                        self.image = self.frames_left_kicking[self.cur_frame]
                 else:
                     if self.vector_left_right == 1:
                         self.cur_frame = (self.cur_frame + 1) % len(self.frames_right)
-                        self.image = self.frames_stand_right[self.cur_frame]
+                        self.image = self.frames_stand_right_kick[self.cur_frame]
                     if self.vector_left_right == 2:
                         self.cur_frame = (self.cur_frame + 1) % len(self.frames_left)
-                        self.image = self.frames_stand_left[self.cur_frame]
+                        self.image = self.frames_stand_left_kick[self.cur_frame]
 
 
         if not (buttons[pygame.K_UP] or buttons[pygame.K_DOWN] or buttons[pygame.K_RIGHT] or buttons[pygame.K_LEFT]):
@@ -584,11 +636,23 @@ class MainHero(pygame.sprite.Sprite):
                 phi = - math.pi / 2
 
         FireBall(self.rect.x + 35, self.rect.y + 10, 0, phi, all_sprites, fireballs)
+        hero.change_manna(-10)
 
     def change_health(self, value):
-        self.health += value
-        if self.health < 0:
+        if (self.health + value <= 100) and (self.health + value >= 0):
+            self.health += value
+        elif (self.health + value <= 0):
             self.health = 0
+        else:
+            self.health = 100
+    def change_manna(self,value):
+        if (self.manna + value<= 100) and (self.manna + value >= 0):
+            self.manna += value
+        elif self.manna + value <= 0:
+            self.manna = 0
+        else:
+            self.manna = 100
+
 
 
 class Walls(pygame.sprite.Sprite):
@@ -606,6 +670,16 @@ class Walls(pygame.sprite.Sprite):
 
     def update(self, *args):
         # камон, это же стены
+        pass
+class Tree(pygame.sprite.Sprite):
+    def __init__(self, tree_image, coords, *groups):
+        super().__init__(*groups)
+        self.image = tree_image
+        self.rect = self.image.get_rect()
+        self.rect.x = coords[0]
+        self.rect.y = coords[1]
+    def update(self, *args):
+        # камон, это же стены(деревья)
         pass
 
 
@@ -636,6 +710,9 @@ class Camera:
     def apply(self, obj):
         obj.rect.x += self.dx
         obj.rect.y += self.dy
+        if obj is hero:
+            hero.realx -= self.dx
+            hero.realy -= self.dy
 
     # позиционировать камеру на объекте target
     def update(self, *args):
@@ -663,6 +740,7 @@ enemy_group = pygame.sprite.Group()
 fireballs = pygame.sprite.Group()
 mages_group = pygame.sprite.Group()
 mage_fireballs = pygame.sprite.Group()
+objects = pygame.sprite.Group()
 
 mage_counter = 0 # счётчик, чтобы стреляли маги
 k = 0
@@ -762,11 +840,44 @@ while gamerun:
                              load_image("bomzh_vprapo_shout4.png"), load_image("bomzh_vprapo_shout5.png"),
                              load_image("bomzh_vprapo_shout6.png"),
                              load_image("bomzh_vprapo_shout7.png")],
+                            [load_image("bomzh_vlevo_kick0.png"), load_image("bomzh_vlevo_kick1.png"),
+                             load_image("bomzh_vlevo_kick2.png"), load_image("bomzh_vlevo_kick3.png"),
+                             load_image("bomzh_vlevo_kick4.png"), load_image("bomzh_vlevo_kick5.png"),
+                             load_image("bomzh_vlevo_kick6.png"), load_image("bomzh_vlevo_kick7.png")],
+                            [load_image("bomzh_vprapo_kick0.png"), load_image("bomzh_vprapo_kick1.png"),
+                             load_image("bomzh_vprapo_kick2.png"), load_image("bomzh_vprapo_kick3.png"),
+                             load_image("bomzh_vprapo_kick4.png"), load_image("bomzh_vprapo_kick5.png"),
+                             load_image("bomzh_vprapo_kick6.png"),
+                             load_image("bomzh_vprapo_kick7.png")],
+                            [load_image("stait_vlevo_shout0.png"), load_image("stait_vlevo_shout1.png"),
+                             load_image("stait_vlevo_shout2.png"), load_image("stait_vlevo_shout3.png"),
+                             load_image("stait_vlevo_shout4.png"), load_image("stait_vlevo_shout5.png"),
+                             load_image("stait_vlevo_shout6.png"), load_image("stait_vlevo_shout7.png"),
+                             load_image("stait_vlevo_shout8.png")],
+                            [load_image("stait_vpravo_shout0.png"), load_image("stait_vpravo_shout1.png"),
+                             load_image("stait_vpravo_shout2.png"), load_image("stait_vpravo_shout3.png"),
+                             load_image("stait_vpravo_shout4.png"), load_image("stait_vpravo_shout5.png"),
+                             load_image("stait_vpravo_shout6.png"), load_image("stait_vpravo_shout7.png"),
+                             load_image("stait_vpravo_shout8.png")],
+                            [load_image("stait_vlevo_kick0.png"), load_image("stait_vlevo_kick1.png"),
+                             load_image("stait_vlevo_kick2.png"), load_image("stait_vlevo_kick3.png"),
+                             load_image("stait_vlevo_kick4.png"), load_image("stait_vlevo_kick5.png"),
+                             load_image("stait_vlevo_kick6.png"), load_image("stait_vlevo_kick7.png"),
+                             load_image("stait_vlevo_kick8.png")],
+                            [load_image("stait_vpravo_kick0.png"), load_image("stait_vpravo_kick1.png"),
+                             load_image("stait_vpravo_kick2.png"), load_image("stait_vpravo_kick3.png"),
+                             load_image("stait_vpravo_kick4.png"), load_image("stait_vpravo_kick5.png"),
+                             load_image("stait_vpravo_kick6.png"), load_image("stait_vpravo_kick7.png"),
+                             load_image("stait_vpravo_kick8.png")],
                             (800, 300),
                             all_sprites)
             for i in range(8):
                 Enemy(load_image("bloody_zombie-NESW.png"), 3, 4, all_sprites, enemy_group)
                 Mage(pygame.transform.scale(load_image("mage-NESW.png"), (150, 200)), 3, 4, all_sprites, mages_group)
+            for i in manna_upper_coordinates:
+                Tree(pygame.transform.scale(load_image("manna_upper.png"), (234, 275)), i, all_sprites, objects)
+            for i in health_upper_coordinates:
+                Tree(pygame.transform.scale(load_image("health_upper.png"), (177, 273)), i, all_sprites, objects)
         mage_counter += 1
         for mage in mages_group:
             if mage_counter % 100 == 0 and (mage.rect.x - hero.rect.x) ** 2 + (mage.rect.y - hero.rect.y) ** 2 <= 400 ** 2:
@@ -776,7 +887,7 @@ while gamerun:
                 lvl = False
                 gamerun = False
             if event.type == pygame.MOUSEBUTTONDOWN:
-                if event.button == 1:
+                if event.button == 1 and hero.manna >= 10:
                     hero.hero_fire()
 
         screen.fill((0, 0, 0))
