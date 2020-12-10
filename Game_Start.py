@@ -6,6 +6,10 @@ pygame.init()
 screen = pygame.display.set_mode(SCREENSIZE)  # , pygame.FULLSCREEN
 clock = pygame.time.Clock()
 pygame.display.set_caption('Super Game')
+manna_upper_coordinates = [(804, 310),(-73, 500)]
+health_upper_coordinates = [(1720, 260)]
+manna_upper_real_coordinates = [(410,250),(-430, 447)]
+health_upper_real_coordinates = [(1312,187)]
 
 
 def load_image(name):
@@ -63,8 +67,7 @@ screen_rect = (0, 0, WIDTH, HEIGHT)
 class FireBall(pygame.sprite.Sprite):
     """Фаерболлы. Что умеют:
     при попадании во врага убивают его и исчезают"""
-    g = load_image("fireball.png").convert()
-    image = pygame.transform.scale(g, (20, 20))
+    image = pygame.transform.scale(load_image("fireball_new.png"), (20, 20))
 
     def __init__(self, x, y, vector, *groups):
         super().__init__(*groups)
@@ -151,6 +154,7 @@ class Enemy(pygame.sprite.Sprite):
                 elem.kill()
                 if self.health <= 0:
                     self.kill()
+                    hero.gold += 5
 
         # наносим урон герою
         if self.rect.colliderect(hero):
@@ -226,25 +230,31 @@ class Enemy(pygame.sprite.Sprite):
 class MainHero(pygame.sprite.Sprite):
     """Класс главного героя. Что умеет:
     1. бегает
-    2. стреляет фаерболлами
-    to-do
-    3. анимация ближнего боя"""
+    2. стреляет фаерболлами"""
     image = load_image("hero.png")
 
-    def __init__(self, frames_right, frames_left, frames_stand_left, frames_stand_right, frames_left_shouting,frames_right_shouting, start_pos, *groups):
+    def __init__(self, frames_right, frames_left, frames_stand_left, frames_stand_right, frames_left_shouting,frames_right_shouting, frames_left_kicking,frames_right_kicking, frames_stand_left_shouting, frames_stand_right_shouting, frames_stand_left_kick, frames_stand_right_kick, start_pos, *groups):
         super().__init__(*groups)
         self.frames_right = frames_right
         self.frames_left = frames_left
         self.frames_stand_left = frames_stand_left
+        self.frames_stand_right_shouting = frames_stand_right_shouting
+        self.frames_stand_left_shouting = frames_stand_left_shouting
+        self.frames_stand_right_kick = frames_stand_right_kick
+        self.frames_stand_left_kick = frames_stand_left_kick
         self.frames_stand_right = frames_stand_right
         self.frames_right_shouting = frames_right_shouting
         self.frames_left_shouting = frames_left_shouting
+        self.frames_right_kicking = frames_right_kicking
+        self.frames_left_kicking = frames_left_kicking
         self.cur_frame = 0
         self.frame_count = 0
+        self.gold = 0
         self.image = self.frames_right[self.cur_frame]
         self.rect = self.image.get_rect()
         self.rect.x = start_pos[0]
         self.rect.y = start_pos[1]
+        self.realx = self.realy = 0
         self.mask = pygame.mask.from_surface(self.image)
         #self.mask = pygame.mask.from_surface(pygame.Surface((self.rect.width, self.rect.height), pygame.SRCALPHA))
         #self.mask = self.rect
@@ -254,25 +264,29 @@ class MainHero(pygame.sprite.Sprite):
         self.vector_left_right = 1
         self.vector_stand = 1
         self.health = 100
+        self.manna = 100
         # проверка на остановку
         self.stand = True
         # чтобы перс не застрявал в верхних стенах
         self.in_wall_prison = False
         # проверка на стрельбу
         self.is_shouting = False
+        #проверка на рукопашку
+        self.is_kicking = False
 
     def update(self, *args):
         buttons = pygame.key.get_pressed()
         pygame.draw.rect(screen, (255, 0, 0), (WIDTH - 130, 20, int(hero.health), 10))
-<<<<<<< HEAD
-        if buttons[pygame.K_SPACE]:
+        pygame.draw.rect(screen, (0, 0, 255), (WIDTH - 130, 40, int(hero.manna), 10))
+        if buttons[pygame.K_SPACE] and (self.manna >= 10):
             self.is_shouting = True
         else:
             self.is_shouting = False
-        if buttons[pygame.K_UP]:  # and not pygame.sprite.collide_mask(self, walls):
-=======
+        if buttons[pygame.K_e] and (self.manna >= 5):
+            self.is_kicking = True
+        else:
+            self.is_kicking = False
         if buttons[pygame.K_UP]:
->>>>>>> 42b83b66d7583c74ab2a65174e17c83e512c3fb5
             self.vector = 3
             self.rect.y -= self.v
             if  pygame.sprite.collide_mask(self, walls):
@@ -305,7 +319,15 @@ class MainHero(pygame.sprite.Sprite):
                 self.stand = False
 
         if self.frame_count % 5 == 0:
-            if not self.is_shouting:
+            hero.change_manna(0.2)
+            for i in manna_upper_real_coordinates:
+                if ((hero.realx) - (i[0])) ** 2 + ((hero.realy) - (i[1])) ** 2 < 10000:
+                    hero.change_manna(0.5)
+            for i in health_upper_real_coordinates:
+                if ((hero.realx) - (i[0])) ** 2 + ((hero.realy) - (i[1])) ** 2 < 10000:
+                    hero.change_health(0.5)
+
+            if not self.is_shouting and not self.is_kicking:
                 if not self.stand:
                     if self.vector_left_right == 1:
                         self.cur_frame = (self.cur_frame + 1) % len(self.frames_right)
@@ -320,7 +342,8 @@ class MainHero(pygame.sprite.Sprite):
                     if self.vector_left_right == 2:
                         self.cur_frame = (self.cur_frame + 1) % len(self.frames_left)
                         self.image = self.frames_stand_left[self.cur_frame]
-            else:
+            elif self.is_shouting and not self.is_kicking:
+                hero.change_manna(-10)
                 if not self.stand:
                     if self.vector_left_right == 1:
                         self.cur_frame = (self.cur_frame + 1) % len(self.frames_right_shouting)
@@ -328,14 +351,29 @@ class MainHero(pygame.sprite.Sprite):
                     if self.vector_left_right == 2:
                         self.cur_frame = (self.cur_frame + 1) % len(self.frames_left_shouting)
                         self.image = self.frames_left_shouting[self.cur_frame]
+                elif self.stand:
+                    if self.vector_left_right == 1:
+                        self.cur_frame = (self.cur_frame + 1) % len(self.frames_right)
+                        self.image = self.frames_stand_right_shouting[self.cur_frame]
+                    if self.vector_left_right == 2:
+                        self.cur_frame = (self.cur_frame + 1) % len(self.frames_left)
+                        self.image = self.frames_stand_left_shouting[self.cur_frame]
+            else:
+                hero.change_manna(-5)
+                if not self.stand:
+                    if self.vector_left_right == 1:
+                        self.cur_frame = (self.cur_frame + 1) % len(self.frames_right_kicking)
+                        self.image = self.frames_right_kicking[self.cur_frame]
+                    if self.vector_left_right == 2:
+                        self.cur_frame = (self.cur_frame + 1) % len(self.frames_left_kicking)
+                        self.image = self.frames_left_kicking[self.cur_frame]
                 else:
                     if self.vector_left_right == 1:
                         self.cur_frame = (self.cur_frame + 1) % len(self.frames_right)
-                        self.image = self.frames_stand_right[self.cur_frame]
+                        self.image = self.frames_stand_right_kick[self.cur_frame]
                     if self.vector_left_right == 2:
                         self.cur_frame = (self.cur_frame + 1) % len(self.frames_left)
-                        self.image = self.frames_stand_left[self.cur_frame]
-
+                        self.image = self.frames_stand_left_kick[self.cur_frame]
 
 
         if not (buttons[pygame.K_UP] or buttons[pygame.K_DOWN] or buttons[pygame.K_RIGHT] or buttons[pygame.K_LEFT]):
@@ -343,11 +381,22 @@ class MainHero(pygame.sprite.Sprite):
         self.frame_count += 1
 
     def fire(self):
-        FireBall(self.rect.x, self.rect.y, self.vector, all_sprites, fireballs)
+        FireBall(self.rect.x+20, self.rect.y-5, self.vector, all_sprites, fireballs)
     def change_health(self, value):
-        self.health += value
-        if self.health < 0:
+        if (self.health + value <= 100) and (self.health + value >= 0):
+            self.health += value
+        elif (self.health + value <= 0):
             self.health = 0
+        else:
+            self.health = 100
+    def change_manna(self,value):
+        if (self.manna + value<= 100) and (self.manna + value >= 0):
+            self.manna += value
+        elif self.manna + value <= 0:
+            self.manna = 0
+        else:
+            self.manna = 100
+
 
 
 class Walls(pygame.sprite.Sprite):
@@ -365,6 +414,16 @@ class Walls(pygame.sprite.Sprite):
 
     def update(self, *args):
         # камон, это же стены
+        pass
+class Tree(pygame.sprite.Sprite):
+    def __init__(self, tree_image, coords, *groups):
+        super().__init__(*groups)
+        self.image = tree_image
+        self.rect = self.image.get_rect()
+        self.rect.x = coords[0]
+        self.rect.y = coords[1]
+    def update(self, *args):
+        # камон, это же стены(деревья)
         pass
 
 
@@ -395,6 +454,9 @@ class Camera:
     def apply(self, obj):
         obj.rect.x += self.dx
         obj.rect.y += self.dy
+        if obj is hero:
+            hero.realx -= self.dx
+            hero.realy -= self.dy
 
     # позиционировать камеру на объекте target
     def update(self, *args):
@@ -420,6 +482,7 @@ camera = Camera()
 all_sprites = pygame.sprite.Group()
 enemy_group = pygame.sprite.Group()
 fireballs = pygame.sprite.Group()
+objects = pygame.sprite.Group()
 
 k = 0
 fps = 60
@@ -518,16 +581,50 @@ while gamerun:
                              load_image("bomzh_vprapo_shout2.png"), load_image("bomzh_vprapo_shout3.png"),
                              load_image("bomzh_vprapo_shout4.png"), load_image("bomzh_vprapo_shout5.png"),
                              load_image("bomzh_vprapo_shout6.png"),
-                             load_image("bomzh_vprapo_shout7.png")], (800, 300),
+                             load_image("bomzh_vprapo_shout7.png")],
+                            [load_image("bomzh_vlevo_kick0.png"), load_image("bomzh_vlevo_kick1.png"),
+                             load_image("bomzh_vlevo_kick2.png"), load_image("bomzh_vlevo_kick3.png"),
+                             load_image("bomzh_vlevo_kick4.png"), load_image("bomzh_vlevo_kick5.png"),
+                             load_image("bomzh_vlevo_kick6.png"), load_image("bomzh_vlevo_kick7.png")],
+                            [load_image("bomzh_vprapo_kick0.png"), load_image("bomzh_vprapo_kick1.png"),
+                             load_image("bomzh_vprapo_kick2.png"), load_image("bomzh_vprapo_kick3.png"),
+                             load_image("bomzh_vprapo_kick4.png"), load_image("bomzh_vprapo_kick5.png"),
+                             load_image("bomzh_vprapo_kick6.png"),
+                             load_image("bomzh_vprapo_kick7.png")],
+                            [load_image("stait_vlevo_shout0.png"), load_image("stait_vlevo_shout1.png"),
+                             load_image("stait_vlevo_shout2.png"), load_image("stait_vlevo_shout3.png"),
+                             load_image("stait_vlevo_shout4.png"), load_image("stait_vlevo_shout5.png"),
+                             load_image("stait_vlevo_shout6.png"), load_image("stait_vlevo_shout7.png"),
+                             load_image("stait_vlevo_shout8.png")],
+                            [load_image("stait_vpravo_shout0.png"), load_image("stait_vpravo_shout1.png"),
+                             load_image("stait_vpravo_shout2.png"), load_image("stait_vpravo_shout3.png"),
+                             load_image("stait_vpravo_shout4.png"), load_image("stait_vpravo_shout5.png"),
+                             load_image("stait_vpravo_shout6.png"), load_image("stait_vpravo_shout7.png"),
+                             load_image("stait_vpravo_shout8.png")],
+                            [load_image("stait_vlevo_kick0.png"), load_image("stait_vlevo_kick1.png"),
+                             load_image("stait_vlevo_kick2.png"), load_image("stait_vlevo_kick3.png"),
+                             load_image("stait_vlevo_kick4.png"), load_image("stait_vlevo_kick5.png"),
+                             load_image("stait_vlevo_kick6.png"), load_image("stait_vlevo_kick7.png"),
+                             load_image("stait_vlevo_kick8.png")],
+                            [load_image("stait_vpravo_kick0.png"), load_image("stait_vpravo_kick1.png"),
+                             load_image("stait_vpravo_kick2.png"), load_image("stait_vpravo_kick3.png"),
+                             load_image("stait_vpravo_kick4.png"), load_image("stait_vpravo_kick5.png"),
+                             load_image("stait_vpravo_kick6.png"), load_image("stait_vpravo_kick7.png"),
+                             load_image("stait_vpravo_kick8.png")],
+                            (800, 300),
                             all_sprites)
             for i in range(5):
                 Enemy(load_image("bloody_zombie-NESW.png"), 3, 4, all_sprites, enemy_group)
+            for i in manna_upper_coordinates:
+                Tree(pygame.transform.scale(load_image("manna_upper.png"), (234, 275)), i, all_sprites, objects)
+            for i in health_upper_coordinates:
+                Tree(pygame.transform.scale(load_image("health_upper.png"), (177, 273)), i, all_sprites, objects)
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 lvl = False
                 gamerun = False
             if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_SPACE:
+                if (event.key == pygame.K_SPACE and hero.manna >= 10):
                     hero.fire()
 
         screen.fill((0, 0, 0))
