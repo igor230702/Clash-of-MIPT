@@ -74,7 +74,7 @@ class FireBall(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.x = x
         self.rect.y = y
-        self.v = 5
+        self.v = 8
         self.phi = phi
         self.vector = vector
 
@@ -108,7 +108,7 @@ class Mage_FireBall(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.x = x
         self.rect.y = y
-        self.v = 5
+        self.v = 8
         self.phi = phi
         self.vector = vector
         self.damage = 5
@@ -153,22 +153,17 @@ class Enemy(pygame.sprite.Sprite):
         self.cut_sheet(sheet, columns, rows)
         self.cur_frame = 0
         self.image = self.frames_right[self.cur_frame]
+
         self.rect = self.image.get_rect()
         w = self.rect.w
         h = self.rect.h
+        self.mask = pygame.mask.from_surface(self.image)
 
         while True:
-            rand_x = random.randint(w, floor.mask.get_size()[0] - w)
-            rand_y = random.randint(h, floor.mask.get_size()[1] - h)
-            ok = 1
-            corners = ((rand_x, rand_y), (rand_x + w, rand_y), (rand_x, rand_y + h), (rand_x + w, rand_y + h))
-            for corner in corners:
-                ok *= floor.mask.get_at(corner)
-            if ok == 1:
+            self.rect.x = random.randint(w, floor.mask.get_size()[0] - w)
+            self.rect.y = random.randint(h, floor.mask.get_size()[1] - h)
+            if not pygame.sprite.collide_mask(self, walls):
                 break
-        self.rect.x = rand_x
-        self.rect.y = rand_y
-        self.mask = pygame.mask.from_surface(self.image)
 
         self.vector = 1
         self.frame_count = 0
@@ -205,58 +200,61 @@ class Enemy(pygame.sprite.Sprite):
                 elem.kill()
                 if self.health <= 0:
                     self.kill()
+        # наносим урон герою
+        if self.rect.colliderect(hero):
+            hero.change_health(-self.damage)
         # движение врагов
-        if ((self.rect.x - hero.rect.x) ** 2 + (self.rect.y - hero.rect.y) ** 2) < 50000 and not self.rect.colliderect(
-                hero):
-            self.v = 3
+        lx = self.rect.x - hero.rect.x
+        ly = self.rect.y - hero.rect.y
+        l = lx ** 2 + ly ** 2
+        if l < 400 ** 2 and not self.rect.colliderect(hero):
+            self.v = 4
             # задаем 4 возможных направления передвижений зомби
-            x1 = {"distance": (self.rect.x + self.v - hero.rect.x) ** 2 + (self.rect.y - hero.rect.y) ** 2,
-                  "vector": 1,
-                  "dx": self.v,
+            x1 = {"vector": 1,
+                  "dx": min(self.v, abs(lx)),
                   "dy": 0}
-            x2 = {"distance": (self.rect.x - self.v - hero.rect.x) ** 2 + (self.rect.y - hero.rect.y) ** 2,
-                  "vector": 2,
-                  "dx": -self.v,
+            x2 = {"vector": 2,
+                  "dx": -min(self.v, abs(lx)),
                   "dy": 0}
-            y1 = {"distance": (self.rect.y + self.v - hero.rect.y) ** 2 + (self.rect.x - hero.rect.x) ** 2,
-                  "vector": 3,
+            y1 = {"vector": 3,
                   "dx": 0,
-                  "dy": self.v}
-            y2 = {"distance": (self.rect.y - self.v - hero.rect.y) ** 2 + (self.rect.x - hero.rect.x) ** 2,
-                  "vector": 4,
+                  "dy": min(self.v, abs(ly))}
+            y2 = {"vector": 4,
                   "dx": 0,
-                  "dy": -self.v}
+                  "dy": -min(self.v, abs(ly))}
+            ways = [0, 0]
 
-            ways = [x1, x2, y1, y2]
+            if lx>0:
+                ways[0] = x2
+            elif lx!=0:
+                ways[0] = x1
+            if ly > 0:
+                ways[1] = y2
+            elif ly!=0:
+                ways[1] = y1
+            if abs(ly) > abs(lx):
+                ways.reverse()
 
-            def optimal_way(ar):
-                # выбираем путь наименьшей длины
-                ok = min(ar, key=lambda i: i["distance"])
-                self.rect.x += ok["dx"]
-                self.rect.y += ok["dy"]
-                for elem in enemy_group: # этот кусок кода нужен для того, чтобы зомби не сталкивались
-                    enemy_group.remove(elem)
-                    if pygame.sprite.spritecollideany(elem, enemy_group):
-                        self.rect.x -= ok["dx"]
-                        self.rect.y -= ok["dy"]
-                    enemy_group.add(elem)
-                if pygame.sprite.collide_mask(self, walls): # проверяем его на пригодность
-                    # если зомби зомби пересек спрайт стены, то отменяем действие
-                    self.rect.x -= ok["dx"]
-                    self.rect.y -= ok["dy"]
-                    # ищем другое допустимое перемещение
-                    ways = [elem for elem in ar if elem != ok]
-                    if ways:
-                        optimal_way(ways)
+            for d in ways:
+                if d!=0:
+
+                    # выбираем путь наименьшей длины
+                    self.rect.x += d["dx"]
+                    self.rect.y += d["dy"]
+                    zomb_collision = False
+                    for enemy in enemy_group:
+                        if (enemy != self and pygame.sprite.collide_mask(self, enemy)):
+                            zomb_collision = True
+                            break
+                    if pygame.sprite.collide_mask(self, walls) or zomb_collision :  # проверяем его на пригодность
+                        # если зомби зомби пересек спрайт стены, то отменяем действие
+                        self.rect.x -= d["dx"]
+                        self.rect.y -= d["dy"]
                     else:
-                        return
-                else:
-                    # выходим из рекурсии, когда такое перемещение найдено
-                    self.vector = ok["vector"]
-                    self.stand = False
-                    return
-
-            optimal_way(ways)
+                        # выходим, когда такое перемещение найдено
+                        self.vector = d["vector"]
+                        self.stand = False
+                        break
 
         # обновляем картинки зомби
         if self.frame_count % 5 == 0 and not self.stand:
@@ -293,22 +291,17 @@ class Mage(pygame.sprite.Sprite):
         self.cut_sheet(sheet, columns, rows)
         self.cur_frame = 0
         self.image = self.frames_right[self.cur_frame]
+        self.mask = pygame.mask.from_surface(self.image)
         self.rect = self.image.get_rect()
         w = self.rect.w
         h = self.rect.h
 
         while True:
-            rand_x = random.randint(w, floor.mask.get_size()[0] - w)
-            rand_y = random.randint(h, floor.mask.get_size()[1] - h)
-            ok = 1
-            corners = ((rand_x, rand_y), (rand_x + w, rand_y), (rand_x, rand_y + h), (rand_x + w, rand_y + h))
-            for corner in corners:
-                ok *= floor.mask.get_at(corner)
-            if ok == 1:
+            self.rect.x = random.randint(w, floor.mask.get_size()[0] - w)
+            self.rect.y = random.randint(h, floor.mask.get_size()[1] - h)
+            if not pygame.sprite.collide_mask(self, walls):
                 break
-        self.rect.x = rand_x
-        self.rect.y = rand_y
-        self.mask = pygame.mask.from_surface(self.image)
+
         self.vector = 1
         self.frame_count = 0
         self.health = 10
@@ -345,162 +338,67 @@ class Mage(pygame.sprite.Sprite):
                 if self.health <= 0:
                     self.kill()
 
-        # наносим урон герою
-        if self.rect.colliderect(hero):
-            hero.change_health(-self.damage)
 
         # движение врагов
-        if ((self.rect.x - hero.rect.x) ** 2 + (self.rect.y - hero.rect.y) ** 2) > 25000 and ((self.rect.x - hero.rect.x) ** 2
-                + (self.rect.y - hero.rect.y) ** 2) < 150000 and not self.rect.colliderect(hero):
+        lx = self.rect.x - hero.rect.x
+        ly = self.rect.y - hero.rect.y
+        l = lx ** 2 + ly ** 2
+        far = l > 200**2 and l < 400**2
+        near = l < 180**2
+        if far or near :
             self.v = 3
-            x1 = {"distance": (self.rect.x + self.v - hero.rect.x) ** 2 + (self.rect.y - hero.rect.y) ** 2,
-                  "vector": 1,
+            x1 = {"vector": 1,
                   "dx": self.v,
                   "dy": 0}
-            x2 = {"distance": (self.rect.x - self.v - hero.rect.x) ** 2 + (self.rect.y - hero.rect.y) ** 2,
-                  "vector": 2,
+            x2 = {"vector": 2,
                   "dx": -self.v,
                   "dy": 0}
-            y1 = {"distance": (self.rect.y + self.v - hero.rect.y) ** 2 + (self.rect.x - hero.rect.x) ** 2,
-                  "vector": 3,
+            y1 = {"vector": 3,
                   "dx": 0,
                   "dy": self.v}
-            y2 = {"distance": (self.rect.y - self.v - hero.rect.y) ** 2 + (self.rect.x - hero.rect.x) ** 2,
-                  "vector": 4,
+            y2 = {"vector": 4,
                   "dx": 0,
                   "dy": -self.v}
+            ways = [0, 0]
 
-            ways = [x1, x2, y1, y2]
+            if lx > 0 and far or lx < 0 and near:
+                ways[0] = x2
+            else:
+                ways[0] = x1
+            if ly > 0 and far or ly < 0 and near:
+                ways[1] = y2
+            else:
+                ways[1] = y1
+            if (abs(ly) > abs(lx)) == far:
+                ways.reverse()
 
-            def optimal_way(ar):
-                # выбираем путь наименьшей длины
-                ok = min(ar, key=lambda i: i["distance"])
-                self.rect.x += ok["dx"]
-                self.rect.y += ok["dy"]
-                for elem in mages_group: # этот кусок кода нужен для того, чтобы зомби не сталкивались
-                    mages_group.remove(elem)
-                    if pygame.sprite.spritecollideany(elem, mages_group):
-                        self.rect.x -= ok["dx"]
-                        self.rect.y -= ok["dy"]
-                    mages_group.add(elem)
-                if pygame.sprite.collide_mask(self, walls):  # проверяем его на пригодность
-                    # если зомби зомби пересек спрайт стены, то отменяем действие
-                    self.rect.x -= ok["dx"]
-                    self.rect.y -= ok["dy"]
-                    # ищем другое допустимое перемещение
-                    ways = [elem for elem in ar if elem != ok]
-                    if ways:
-                        optimal_way(ways)
-                    else:
-                        return
 
-                else:
-                    # выходим из рекурсии, когда такое перемещение найдено
-                    self.vector = ok["vector"]
-                    self.stand = False
-                    return
-
-            optimal_way(ways)
-
-        if ((self.rect.x - hero.rect.x) ** 2 + (self.rect.y - hero.rect.y) ** 2) < 25000 and not self.rect.colliderect(
-                hero): # если маги близко к герою, то они отбегают от него
-            x1 = {"distance": (self.rect.x + self.v - hero.rect.x) ** 2 + (self.rect.y - hero.rect.y) ** 2,
-                  "vector": 1,
-                  "dx": self.v,
-                  "dy": 0}
-            x2 = {"distance": (self.rect.x - self.v - hero.rect.x) ** 2 + (self.rect.y - hero.rect.y) ** 2,
-                  "vector": 2,
-                  "dx": -self.v,
-                  "dy": 0}
-            y1 = {"distance": (self.rect.y + self.v - hero.rect.y) ** 2 + (self.rect.x - hero.rect.x) ** 2,
-                  "vector": 3,
-                  "dx": 0,
-                  "dy": self.v}
-            y2 = {"distance": (self.rect.y - self.v - hero.rect.y) ** 2 + (self.rect.x - hero.rect.x) ** 2,
-                  "vector": 4,
-                  "dx": 0,
-                  "dy": -self.v}
-
-            ways = [x1, x2, y1, y2]
-
-            def optimal_way(ar):
-                # выбираем путь наименьшей длины
-                ok = min(ar, key=lambda i: i["distance"])
-                self.rect.x -= ok["dx"]
-                self.rect.y -= ok["dy"]
-                if pygame.sprite.collide_mask(self, walls):  # проверяем его на пригодность
-                    # если зомби зомби пересек спрайт стены, то отменяем действие
-                    self.rect.x += ok["dx"]
-                    self.rect.y += ok["dy"]
-                    # ищем другое допустимое перемещение
-                    ways = [elem for elem in ar if elem != ok]
-                    if ways:
-                        optimal_way(ways)
-                    else:
-                        return
-
-                else:
-                    # выходим из рекурсии, когда такое перемещение найдено
-                    self.vector = ok["vector"]
-                    self.stand = False
-                    return
-
-            optimal_way(ways)
-            self.v = 4
-            # задаем 4 возможных направления передвижений зомби
-            x1 = {"distance": (self.rect.x + self.v - hero.rect.x) ** 2 + (self.rect.y - hero.rect.y) ** 2,
-                  "vector": 1,
-                  "dx": self.v,
-                  "dy": 0}
-            x2 = {"distance": (self.rect.x - self.v - hero.rect.x) ** 2 + (self.rect.y - hero.rect.y) ** 2,
-                  "vector": 2,
-                  "dx": -self.v,
-                  "dy": 0}
-            y1 = {"distance": (self.rect.y + self.v - hero.rect.y) ** 2 + (self.rect.x - hero.rect.x) ** 2,
-                  "vector": 3,
-                  "dx": 0,
-                  "dy": self.v}
-            y2 = {"distance": (self.rect.y - self.v - hero.rect.y) ** 2 + (self.rect.x - hero.rect.x) ** 2,
-                  "vector": 4,
-                  "dx": 0,
-                  "dy": -self.v}
-
-            ways = [x1, x2, y1, y2]
-
-            def optimal_way(ar):
-                # выбираем путь наименьшей длины
-                ok = min(ar, key=lambda i: i["distance"])
-                self.rect.x += ok["dx"]
-                self.rect.y += ok["dy"]
+            for d in ways:
+                self.rect.x += d["dx"]
+                self.rect.y += d["dy"]
                 zomb_collision = False
-                for enemy in enemy_group:
-                    if (enemy != self and pygame.sprite.collide_mask(self, enemy)):
+                for mag in mages_group:
+                    if (mag != self and pygame.sprite.collide_mask(self, mag)):
                         zomb_collision = True
                         break
                 if pygame.sprite.collide_mask(self, walls) or zomb_collision:  # проверяем его на пригодность
                     # если зомби зомби пересек спрайт стены, то отменяем действие
-                    self.rect.x -= ok["dx"]
-                    self.rect.y -= ok["dy"]
-                    # ищем другое допустимое перемещение
-                    ways = [elem for elem in ar if elem != ok]
-                    if ways:
-                        optimal_way(ways)
-                    else:
-                        return
-
+                    self.rect.x -= d["dx"]
+                    self.rect.y -= d["dy"]
                 else:
-                    # выходим из рекурсии, когда такое перемещение найдено
-                    self.vector = ok["vector"]
+                    # выходим, когда такое перемещение найдено
+                    self.vector = d["vector"]
                     self.stand = False
-                    return
+                    break
 
-            optimal_way(ways)
+
+
+
 
 
         # обновляем картинки зомби
         if self.frame_count % 5 == 0 and not self.stand:
             self.cur_frame = (self.cur_frame + 1) % len(self.frames_right)
-            print(len(self.frames_right))
             if self.vector == 1:
                 self.image = self.frames_right[self.cur_frame]
             elif self.vector == 2:
@@ -866,19 +764,19 @@ while gamerun:
                              load_image("bomzh_vprapo_shout7.png")],
                             (800, 300),
                             all_sprites)
-            for i in range(10):
+            for i in range(8):
                 Enemy(load_image("bloody_zombie-NESW.png"), 3, 4, all_sprites, enemy_group)
                 Mage(pygame.transform.scale(load_image("mage-NESW.png"), (150, 200)), 3, 4, all_sprites, mages_group)
         mage_counter += 1
         for mage in mages_group:
-            if mage_counter % 100 == 0 and (mage.rect.x - hero.rect.x) ** 2 + (mage.rect.y - hero.rect.y) ** 2 <= 200 ** 2:
+            if mage_counter % 100 == 0 and (mage.rect.x - hero.rect.x) ** 2 + (mage.rect.y - hero.rect.y) ** 2 <= 400 ** 2:
                 mage.fire()
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 lvl = False
                 gamerun = False
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_SPACE:
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if event.button == 1:
                     hero.hero_fire()
 
         screen.fill((0, 0, 0))
