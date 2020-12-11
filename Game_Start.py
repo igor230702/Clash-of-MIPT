@@ -164,8 +164,8 @@ class Enemy(pygame.sprite.Sprite):
         self.mask = pygame.mask.from_surface(self.image)
 
         while True:
-            self.rect.x = random.randint(w, floor.mask.get_size()[0] - w)
-            self.rect.y = random.randint(h, floor.mask.get_size()[1] - h)
+            self.rect.x = random.randint(walls.rect.x + w, walls.rect.x + walls.mask.get_size()[0] - w)
+            self.rect.y = random.randint(walls.rect.y + h, walls.rect.y + walls.mask.get_size()[1] - h)
             if not pygame.sprite.collide_mask(self, walls):
                 break
 
@@ -200,6 +200,7 @@ class Enemy(pygame.sprite.Sprite):
         if self.health <= 0:
             self.kill()
             hero.gold += 5
+            hero.kills += 1
 
     def update(self, *args):
         # при попадании фаерболаа враг умирает
@@ -308,15 +309,14 @@ class Mage(pygame.sprite.Sprite):
         h = self.rect.h
 
         while True:
-            self.rect.x = random.randint(w, floor.mask.get_size()[0] - w)
-            self.rect.y = random.randint(h, floor.mask.get_size()[1] - h)
+            self.rect.x = random.randint(walls.rect.x + w, walls.rect.x + walls.mask.get_size()[0] - w)
+            self.rect.y = random.randint(walls.rect.y + h, walls.rect.y + walls.mask.get_size()[1] - h)
             if not pygame.sprite.collide_mask(self, walls):
                 break
 
         self.vector = 1
         self.frame_count = 0
         self.health = 10
-        self.damage = 0.2
         # проверка на застой
         self.stand = True
 
@@ -344,10 +344,11 @@ class Mage(pygame.sprite.Sprite):
         # при попадании фаербола враг умирает
         for elem in fireballs:
             if self.rect.colliderect(elem):
-                self.health -= 5
                 elem.kill()
-                if self.health <= 0:
-                    self.kill()
+                self.change_health(-5)
+        if self.rect.colliderect(hero):
+            if hero.is_kicking:
+                self.change_health(-0.1)
 
 
         # движение врагов
@@ -357,7 +358,7 @@ class Mage(pygame.sprite.Sprite):
         far = l > 200**2 and l < 400**2
         near = l < 180**2
         if far or near :
-            self.v = 3
+            self.v = 4
             x1 = {"vector": 1,
                   "dx": self.v,
                   "dy": 0}
@@ -402,11 +403,6 @@ class Mage(pygame.sprite.Sprite):
                     self.stand = False
                     break
 
-
-
-
-
-
         # обновляем картинки зомби
         if self.frame_count % 5 == 0 and not self.stand:
             self.cur_frame = (self.cur_frame + 1) % len(self.frames_right)
@@ -423,6 +419,12 @@ class Mage(pygame.sprite.Sprite):
         pygame.draw.rect(screen, (255, 0, 0), (self.rect.x, self.rect.y, 5 * int(self.health), 5))
 
         self.stand = True
+    def change_health(self, value):
+        self.health += value
+        if self.health <= 0:
+            self.kill()
+            hero.gold += 5
+            hero.kills += 1
 
     def fire(self):
         # этот кусок кода нужен для определения угла выстрела (магом в сторону героя)
@@ -476,6 +478,7 @@ class MainHero(pygame.sprite.Sprite):
         self.cur_frame = 0
         self.frame_count = 0
         self.gold = 0
+        self.kills = 0
         self.image = self.frames_right[self.cur_frame]
         self.rect = self.image.get_rect()
         self.rect.x = start_pos[0]
@@ -505,6 +508,7 @@ class MainHero(pygame.sprite.Sprite):
         pygame.draw.rect(screen, (255, 255, 255), (WIDTH - 130, 40, 100, 10))
         pygame.draw.rect(screen, (255, 0, 0), (WIDTH - 130, 20, int(hero.health), 10))
         pygame.draw.rect(screen, (0, 0, 255), (WIDTH - 130, 40, int(hero.manna), 10))
+        screen.blit(pygame.font.Font(None, 30).render('Kills: '+ str(self.kills), 1, (255, 0, 0)), (WIDTH - 240, 20))
         if pygame.mouse.get_pressed()[0] and (self.manna >= 10):
             self.is_shouting = True
         else:
@@ -586,7 +590,7 @@ class MainHero(pygame.sprite.Sprite):
                         self.cur_frame = (self.cur_frame + 1) % len(self.frames_left)
                         self.image = self.frames_stand_left_shouting[self.cur_frame]
             else:
-                hero.change_manna(-5)
+                hero.change_manna(-3)
                 if not self.stand:
                     if self.vector_left_right == 1:
                         self.cur_frame = (self.cur_frame + 1) % len(self.frames_right_kicking)
@@ -741,6 +745,8 @@ mage_fireballs = pygame.sprite.Group()
 objects = pygame.sprite.Group()
 
 mage_counter = 0 # счётчик, чтобы стреляли маги
+lvl_num = 1 # номер уровня
+
 k = 0
 fps = 60
 K = -1
@@ -759,9 +765,10 @@ x_fon, y_fon = 23, 45
 x_walls, y_walls = 0, 0
 future = False
 is_hero = False
+
 while gamerun:
+    font = pygame.font.Font(None, 20)
     if dialog:
-        font = pygame.font.Font(None, 20)
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 gamerun = False
@@ -869,13 +876,15 @@ while gamerun:
                              load_image("stait_vpravo_kick8.png")],
                             (800, 300),
                             all_sprites)
-            for i in range(8):
-                Enemy(load_image("bloody_zombie-NESW.png"), 3, 4, all_sprites, enemy_group)
-                Mage(pygame.transform.scale(load_image("mage-NESW.png"), (150, 200)), 3, 4, all_sprites, mages_group)
             for i in manna_upper_coordinates:
                 Tree(pygame.transform.scale(load_image("manna_upper.png"), (234, 275)), i, all_sprites, objects)
             for i in health_upper_coordinates:
                 Tree(pygame.transform.scale(load_image("health_upper.png"), (177, 273)), i, all_sprites, objects)
+        if not (mages_group or enemy_group): #переход на следующий уровень
+            for i in range(lvl_num):
+                Enemy(load_image("bloody_zombie-NESW.png"), 3, 4, all_sprites, enemy_group)
+                Mage(pygame.transform.scale(load_image("mage-NESW.png"), (150, 200)), 3, 4, all_sprites, mages_group)
+                lvl_num += 1
         mage_counter += 1
         for mage in mages_group:
             if mage_counter % 100 == 0 and (mage.rect.x - hero.rect.x) ** 2 + (mage.rect.y - hero.rect.y) ** 2 <= 400 ** 2:
