@@ -4,15 +4,16 @@ import math
 import time
 
 from constants import LABELS, Frases, SCREENSIZE, WIDTH, HEIGHT
+
 # проверка связи
 pygame.init()
 screen = pygame.display.set_mode(SCREENSIZE)  # , pygame.FULLSCREEN
 clock = pygame.time.Clock()
 pygame.display.set_caption('Super Game')
-manna_upper_coordinates = [(804, 310),(-73, 500)]
+manna_upper_coordinates = [(804, 310), (-73, 500)]
 health_upper_coordinates = [(1720, 260)]
-manna_upper_real_coordinates = [(410,250),(-430, 447)]
-health_upper_real_coordinates = [(1312,187)]
+manna_upper_real_coordinates = [(410, 250), (-430, 447)]
+health_upper_real_coordinates = [(1312, 187)]
 
 
 def load_image(name):
@@ -96,7 +97,7 @@ class FireBall(pygame.sprite.Sprite):
                 self.rect.y -= self.v
             if self.vector == 4:
                 self.rect.y += self.v
-            if self.vector == 0: # если не задать направление. то он полетит под заданным углом
+            if self.vector == 0:  # если не задать направление. то он полетит под заданным углом
                 self.rect.x += self.v * math.cos(self.phi)
                 self.rect.y += self.v * math.sin(self.phi)
 
@@ -131,11 +132,12 @@ class Mage_FireBall(pygame.sprite.Sprite):
                 self.rect.y -= self.v
             if self.vector == 4:
                 self.rect.y += self.v
-            if self.vector == 0: # если не задать направление. то он полетит под заданным углом
+            if self.vector == 0:  # если не задать направление. то он полетит под заданным углом
                 self.rect.x += self.v * math.cos(self.phi)
                 self.rect.y += self.v * math.sin(self.phi)
         if self.rect.colliderect(hero):
             hero.change_health(-self.damage)
+
 
 class Enemy(pygame.sprite.Sprite):
     """Класс врагов ближнего боя. Что умеют:
@@ -145,9 +147,9 @@ class Enemy(pygame.sprite.Sprite):
 
     def __init__(self, sheet, columns, rows, *groups):
         super().__init__(*groups)
-        #self.rect = self.image.get_rect()
-        #self.rect.x = random.randint(700, 900)
-        #self.rect.y = random.randint(200, 400)
+        # self.rect = self.image.get_rect()
+        # self.rect.x = random.randint(700, 900)
+        # self.rect.y = random.randint(200, 400)
         # скорость врага
         self.v = 0
         self.frames_right = []
@@ -195,6 +197,7 @@ class Enemy(pygame.sprite.Sprite):
                 elif j == 3:
                     self.frames_left.append(sheet.subsurface(pygame.Rect(
                         frame_location, self.rect.size)))
+
     def change_health(self, value):
         self.health += value
         if self.health <= 0:
@@ -207,7 +210,6 @@ class Enemy(pygame.sprite.Sprite):
             if self.rect.colliderect(elem):
                 elem.kill()
                 self.change_health(-5)
-
 
         # наносим урон герою
         if self.rect.colliderect(hero):
@@ -235,19 +237,19 @@ class Enemy(pygame.sprite.Sprite):
                   "dy": -min(self.v, abs(ly))}
             ways = [0, 0]
 
-            if lx>0:
+            if lx > 0:
                 ways[0] = x2
-            elif lx!=0:
+            elif lx != 0:
                 ways[0] = x1
             if ly > 0:
                 ways[1] = y2
-            elif ly!=0:
+            elif ly != 0:
                 ways[1] = y1
             if abs(ly) > abs(lx):
                 ways.reverse()
 
             for d in ways:
-                if d!=0:
+                if d != 0:
 
                     # выбираем путь наименьшей длины
                     self.rect.x += d["dx"]
@@ -257,7 +259,7 @@ class Enemy(pygame.sprite.Sprite):
                         if (enemy != self and pygame.sprite.collide_mask(self, enemy)):
                             zomb_collision = True
                             break
-                    if pygame.sprite.collide_mask(self, walls) or zomb_collision :  # проверяем его на пригодность
+                    if pygame.sprite.collide_mask(self, walls) or zomb_collision:  # проверяем его на пригодность
                         # если зомби зомби пересек спрайт стены, то отменяем действие
                         self.rect.x -= d["dx"]
                         self.rect.y -= d["dy"]
@@ -340,23 +342,31 @@ class Mage(pygame.sprite.Sprite):
                     self.frames_left.append(sheet.subsurface(pygame.Rect(
                         frame_location, self.rect.size)))
 
+    def change_health(self, value):
+        self.health += value
+        if self.health <= 0:
+            self.kill()
+            hero.gold += 5
+
     def update(self, *args):
-        # при попадании фаербола враг умирает
         for elem in fireballs:
             if self.rect.colliderect(elem):
-                self.health -= 5
                 elem.kill()
-                if self.health <= 0:
-                    self.kill()
+                self.change_health(-5)
 
+        # наносим урон герою
+        if self.rect.colliderect(hero):
+            hero.change_health(-self.damage)
+            if hero.is_kicking:
+                self.change_health(-0.1)
 
         # движение врагов
         lx = self.rect.x - hero.rect.x
         ly = self.rect.y - hero.rect.y
         l = lx ** 2 + ly ** 2
-        far = l > 200**2 and l < 400**2
-        near = l < 180**2
-        if far or near :
+        far = l > 200 ** 2 and l < 400 ** 2
+        near = l < 180 ** 2
+        if far or near:
             self.v = 3
             x1 = {"vector": 1,
                   "dx": self.v,
@@ -383,7 +393,6 @@ class Mage(pygame.sprite.Sprite):
             if (abs(ly) > abs(lx)) == far:
                 ways.reverse()
 
-
             for d in ways:
                 self.rect.x += d["dx"]
                 self.rect.y += d["dy"]
@@ -401,11 +410,6 @@ class Mage(pygame.sprite.Sprite):
                     self.vector = d["vector"]
                     self.stand = False
                     break
-
-
-
-
-
 
         # обновляем картинки зомби
         if self.frame_count % 5 == 0 and not self.stand:
@@ -452,14 +456,15 @@ class Mage(pygame.sprite.Sprite):
         Mage_FireBall(self.rect.x + 35, self.rect.y + 10, 0, phi, all_sprites, mage_fireballs)
 
 
-
 class MainHero(pygame.sprite.Sprite):
     """Класс главного героя. Что умеет:
     1. бегает
     2. стреляет фаерболлами"""
     image = load_image("hero.png")
 
-    def __init__(self, frames_right, frames_left, frames_stand_left, frames_stand_right, frames_left_shouting,frames_right_shouting, frames_left_kicking,frames_right_kicking, frames_stand_left_shouting, frames_stand_right_shouting, frames_stand_left_kick, frames_stand_right_kick, start_pos, *groups):
+    def __init__(self, frames_right, frames_left, frames_stand_left, frames_stand_right, frames_left_shouting,
+                 frames_right_shouting, frames_left_kicking, frames_right_kicking, frames_stand_left_shouting,
+                 frames_stand_right_shouting, frames_stand_left_kick, frames_stand_right_kick, start_pos, *groups):
         super().__init__(*groups)
         self.frames_right = frames_right
         self.frames_left = frames_left
@@ -482,8 +487,8 @@ class MainHero(pygame.sprite.Sprite):
         self.rect.y = start_pos[1]
         self.realx = self.realy = 0
         self.mask = pygame.mask.from_surface(self.image)
-        #self.mask = pygame.mask.from_surface(pygame.Surface((self.rect.width, self.rect.height), pygame.SRCALPHA))
-        #self.mask = self.rect
+        # self.mask = pygame.mask.from_surface(pygame.Surface((self.rect.width, self.rect.height), pygame.SRCALPHA))
+        # self.mask = self.rect
         self.vector = 1
         # скорость гг
         self.v = 5
@@ -497,7 +502,7 @@ class MainHero(pygame.sprite.Sprite):
         self.in_wall_prison = False
         # проверка на стрельбу
         self.is_shouting = False
-        #проверка на рукопашку
+        # проверка на рукопашку
         self.is_kicking = False
 
     def update(self, *args):
@@ -507,6 +512,7 @@ class MainHero(pygame.sprite.Sprite):
         pygame.draw.rect(screen, (255, 255, 255), (WIDTH - 130, 40, 100, 10))
         pygame.draw.rect(screen, (255, 0, 0), (WIDTH - 130, 20, int(hero.health), 10))
         pygame.draw.rect(screen, (0, 0, 255), (WIDTH - 130, 40, int(hero.manna), 10))
+
         if pygame.mouse.get_pressed()[0] and (self.manna >= 10):
             self.is_shouting = True
         else:
@@ -518,7 +524,7 @@ class MainHero(pygame.sprite.Sprite):
         if buttons[pygame.K_w]:
             self.vector = 3
             self.rect.y -= self.v
-            if  pygame.sprite.collide_mask(self, walls):
+            if pygame.sprite.collide_mask(self, walls):
                 self.rect.y += self.v
             else:
                 self.stand = False
@@ -604,7 +610,6 @@ class MainHero(pygame.sprite.Sprite):
                         self.cur_frame = (self.cur_frame + 1) % len(self.frames_left)
                         self.image = self.frames_stand_left_kick[self.cur_frame]
 
-
         if not (buttons[pygame.K_UP] or buttons[pygame.K_DOWN] or buttons[pygame.K_RIGHT] or buttons[pygame.K_LEFT]):
             self.stand = True
         self.frame_count += 1
@@ -641,12 +646,13 @@ class MainHero(pygame.sprite.Sprite):
     def change_health(self, value):
         if (self.health + value <= 100) and (self.health + value >= 0):
             self.health += value
-        elif (self.health + value <= 0):
+        elif self.health + value <= 0:
             self.health = 0
         else:
             self.health = 100
-    def change_manna(self,value):
-        if (self.manna + value<= 100) and (self.manna + value >= 0):
+
+    def change_manna(self, value):
+        if (self.manna + value <= 100) and (self.manna + value >= 0):
             self.manna += value
         elif self.manna + value <= 0:
             self.manna = 0
@@ -654,11 +660,58 @@ class MainHero(pygame.sprite.Sprite):
             self.manna = 100
 
 
+class Spikes(pygame.sprite.Sprite):
+    """Реализация ловушек с шипамии. На изображениях traps_active.png и traps_passive.png
+    прорисованы состояния ловушек, которые меняются со временем. Если ловушка активна,
+    то она наносит урон юнитам, пересекающим ее спрайт(кроме магов, они парят над шипами. """
+    image_active = load_image('traps_active.png')
+    image_passive = load_image('traps_passive.png')
+
+    def __init__(self, *groups):
+        super().__init__(*groups)
+        self.image = self.image_passive
+        self.mask = pygame.mask.from_surface(self.image_active)
+        self.rect = self.image.get_rect()
+        self.rect.x = 10
+        self.rect.y = -5
+        self.frames_count = 1
+        self.active = False
+        self.hero_damage = 5
+        self.zombie_damage = 1
+
+    def switch_phase(self):  # меняем фазу ловушки
+        self.active = not self.active
+        if self.image == self.image_passive:
+            self.image = self.image_active
+        else:
+            self.image = self.image_passive
+
+    def update(self, *args):
+        if self.active:
+            self.do_damage()
+        if self.active and self.frames_count % 180 == 0:
+            self.switch_phase()
+            self.frames_count = 1
+        if not self.active and self.frames_count % 60 == 0:
+            self.switch_phase()
+            self.frames_count = 1
+        self.frames_count += 1
+
+    def do_damage(self):
+        # for zombie in enemy_group
+        if self.frames_count % 20 == 0:
+            if pygame.sprite.collide_mask(self, hero):
+                 hero.change_health(-self.hero_damage)
+            for zombie in enemy_group:
+                if pygame.sprite.collide_mask(self, zombie):
+                    zombie.change_health(-self.zombie_damage)
+
+
 
 class Walls(pygame.sprite.Sprite):
     """"Тупо стены"""
     image = load_image('стены_1.png')
-    image_mask = load_image('стены_1(ok).png')###???
+    image_mask = load_image('стены_1(ok).png')  ###???
 
     def __init__(self, *groups):
         super().__init__(*groups)
@@ -671,6 +724,8 @@ class Walls(pygame.sprite.Sprite):
     def update(self, *args):
         # камон, это же стены
         pass
+
+
 class Tree(pygame.sprite.Sprite):
     def __init__(self, tree_image, coords, *groups):
         super().__init__(*groups)
@@ -678,6 +733,7 @@ class Tree(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.x = coords[0]
         self.rect.y = coords[1]
+
     def update(self, *args):
         # камон, это же стены(деревья)
         pass
@@ -742,14 +798,14 @@ mages_group = pygame.sprite.Group()
 mage_fireballs = pygame.sprite.Group()
 objects = pygame.sprite.Group()
 
-mage_counter = 0 # счётчик, чтобы стреляли маги
+mage_counter = 0  # счётчик, чтобы стреляли маги
 k = 0
 fps = 60
 K = -1
 xl, yl = 0, 50
 save = False
 Flag = False
-dialog = False # если хотим увидеть предысторию, то надо поставить значение True
+dialog = False  # если хотим увидеть предысторию, то надо поставить значение True
 gamerun = True
 menu = True
 lvl = False
@@ -812,6 +868,7 @@ while gamerun:
             is_hero = True
             floor = Floor(all_sprites)
             walls = Walls(all_sprites)
+            spikes = Spikes(all_sprites)
             hero = MainHero([load_image("bomzh_vprapo_okonchat0.png"), load_image("bomzh_vprapo_okonchat1.png"),
                              load_image("bomzh_vprapo_okonchat2.png"), load_image("bomzh_vprapo_okonchat3.png"),
                              load_image("bomzh_vprapo_okonchat4.png"), load_image("bomzh_vprapo_okonchat5.png"),
@@ -878,9 +935,11 @@ while gamerun:
                 Tree(pygame.transform.scale(load_image("manna_upper.png"), (234, 275)), i, all_sprites, objects)
             for i in health_upper_coordinates:
                 Tree(pygame.transform.scale(load_image("health_upper.png"), (177, 273)), i, all_sprites, objects)
+
         mage_counter += 1
         for mage in mages_group:
-            if mage_counter % 100 == 0 and (mage.rect.x - hero.rect.x) ** 2 + (mage.rect.y - hero.rect.y) ** 2 <= 400 ** 2:
+            if mage_counter % 100 == 0 and (mage.rect.x - hero.rect.x) ** 2 + (
+                    mage.rect.y - hero.rect.y) ** 2 <= 400 ** 2:
                 mage.fire()
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
