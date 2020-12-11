@@ -348,6 +348,7 @@ class Mage(pygame.sprite.Sprite):
         if self.health <= 0:
             self.kill()
             hero.gold += 5
+            hero.kills += 1
 
     def update(self, *args):
         for elem in fireballs:
