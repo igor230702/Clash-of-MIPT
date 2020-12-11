@@ -482,8 +482,6 @@ class MainHero(pygame.sprite.Sprite):
         self.rect.y = start_pos[1]
         self.realx = self.realy = 0
         self.mask = pygame.mask.from_surface(self.image)
-        #self.mask = pygame.mask.from_surface(pygame.Surface((self.rect.width, self.rect.height), pygame.SRCALPHA))
-        #self.mask = self.rect
         self.vector = 1
         # скорость гг
         self.v = 5
