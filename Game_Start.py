@@ -152,6 +152,8 @@ class Enemy(pygame.sprite.Sprite):
         # self.rect.y = random.randint(200, 400)
         # скорость врага
         self.v = 0
+        # коэффициент замедление
+        self.alpha = 1
         self.frames_right = []
         self.frames_left = []
         self.frames_up = []
@@ -210,20 +212,20 @@ class Enemy(pygame.sprite.Sprite):
         for elem in fireballs:
             if self.rect.colliderect(elem):
                 elem.kill()
-                self.change_health(-5)
+                self.change_health(int(-5*hero.attack_coef))
 
 
         # наносим урон герою
         if self.rect.colliderect(hero):
             hero.change_health(-self.damage)
             if hero.is_kicking:
-                self.change_health(-0.1)
+                self.change_health(int(-1*hero.attack_coef))
         # движение врагов
         lx = self.rect.x - hero.rect.x
         ly = self.rect.y - hero.rect.y
         l = lx ** 2 + ly ** 2
         if l < 400 ** 2 and not self.rect.colliderect(hero):
-            self.v = 4
+            self.v = int(4*self.alpha)
             # задаем 4 возможных направления передвижений зомби
             x1 = {"vector": 1,
                   "dx": min(self.v, abs(lx)),
@@ -288,7 +290,6 @@ class Enemy(pygame.sprite.Sprite):
 
         self.stand = True
 
-
 class Mage(pygame.sprite.Sprite):
     """Класс магов. Что умеют:
         1.получать дамаг от попадания фаерболла,
@@ -299,6 +300,8 @@ class Mage(pygame.sprite.Sprite):
         super().__init__(*groups)
         # скорость врага
         self.v = 0
+        # коэффициент замедления
+        self.alpha = 1
         self.frames_right = []
         self.frames_left = []
         self.frames_up = []
@@ -347,17 +350,19 @@ class Mage(pygame.sprite.Sprite):
         self.health += value
         if self.health <= 0:
             self.kill()
-            hero.gold += 5
+            hero.gold += 10
             hero.kills += 1
+            if len(shop) < 8:
+                shop.append(random.choice(possible_spells))
 
     def update(self, *args):
         for elem in fireballs:
             if self.rect.colliderect(elem):
                 elem.kill()
-                self.change_health(-5)
+                self.change_health(int(-5*hero.attack_coef))
         if self.rect.colliderect(hero):
             if hero.is_kicking:
-                self.change_health(-0.1)
+                self.change_health(int(-1*hero.attack_coef))
 
 
         # движение врагов
@@ -367,7 +372,7 @@ class Mage(pygame.sprite.Sprite):
         far = l > 200**2 and l < 400**2
         near = l < 180**2
         if far or near :
-            self.v = 4
+            self.v = int(4*self.alpha)
             x1 = {"vector": 1,
                   "dx": self.v,
                   "dy": 0}
@@ -480,8 +485,9 @@ class MainHero(pygame.sprite.Sprite):
         self.frames_left_kicking = frames_left_kicking
         self.cur_frame = 0
         self.frame_count = 0
-        self.gold = 0
+        self.gold = 100
         self.kills = 0
+        self.attack_coef = 1
         self.image = self.frames_right[self.cur_frame]
         self.rect = self.image.get_rect()
         self.rect.x = start_pos[0]
@@ -515,7 +521,8 @@ class MainHero(pygame.sprite.Sprite):
         pygame.draw.rect(screen, (0, 0, 255), (WIDTH - 130, 40, int(hero.manna), 10))
 
         screen.blit(pygame.font.Font(None, 30).render('Kills: '+ str(self.kills), 1, (255, 0, 0)), (WIDTH - 240, 20))
-        if pygame.mouse.get_pressed()[0] and (self.manna >= 10):
+        screen.blit(pygame.font.Font(None, 30).render('Gold: ' + str(self.gold), 1, (255, 211, 25)), (WIDTH - 240, 40))
+        if pygame.mouse.get_pressed()[0] and (self.manna >= 10) and (pygame.mouse.get_pos()[0] > 100):
             self.is_shouting = True
         else:
             self.is_shouting = False
@@ -642,7 +649,7 @@ class MainHero(pygame.sprite.Sprite):
             elif y - hero.rect.y < 0:
                 phi = - math.pi / 2
 
-        FireBall(self.rect.x + 35, self.rect.y + 10, 0, phi, all_sprites, fireballs)
+        FireBall(self.rect.x + 10, self.rect.y -5 , 0, phi, all_sprites, fireballs)
         hero.change_manna(-10)
 
     def change_health(self, value):
@@ -757,7 +764,6 @@ class Floor(pygame.sprite.Sprite):
         # камон, это же пол
         pass
 
-
 class Camera:
     # зададим начальный сдвиг камеры
     def __init__(self):
@@ -821,6 +827,58 @@ x_fon, y_fon = 23, 45
 x_walls, y_walls = 0, 0
 future = False
 is_hero = False
+
+is_shield_timer = True
+fixed_hero_health =  0
+class Timer:
+    def __init__(self, time, color):
+        self.time = time
+        self.color = color
+    def update(self):
+        global is_shield_timer, fixed_hero_health
+        if self.time < time.time():
+            if self.color == (20, 20, 255):
+                for i in enemy_group:
+                    i.alpha = 1
+                for i in mages_group:
+                    i.alpha = 1
+            elif self.color ==(240,240,240):
+                is_shield_timer = True
+            elif self.color == (40,20,240):
+                hero.v = 5
+            elif self.color == (240,30,30):
+                hero.attack_coef = 1
+            active_spell.remove(self)
+            del self
+        else:
+            if self.color == (20, 20, 255):
+                for i in enemy_group:
+                    i.alpha = 0.25
+                for i in mages_group:
+                    i.alpha = 0.25
+            elif self.color == (40,20,240):
+                hero.v = 10
+            elif self.color == (240,240,240):
+                if is_shield_timer:
+                    fixed_hero_health = hero.health
+                    is_shield_timer = False
+                if not is_shield_timer:
+                    hero.health = fixed_hero_health
+            elif self.color == (240, 30, 30):
+                hero.attack_coef = 2
+
+
+class Spell:
+    def __init__(self, image, price, type):
+        self.image = image
+        self.price = price
+        self.type = type
+
+
+active_spell = []
+possible_spells = [Spell(load_image('spell.png'),50,"gold"),Spell(load_image('fspell.png'),20,"freeze"), Spell(load_image('shield.png'),20,"shield"), Spell(load_image('hspell.png'),40,"health"), Spell(load_image('sspell.png'),20,"speed"),Spell(load_image('rspell.png'),30,"rage")]
+shop = [Spell(load_image('spell.png'),50,"gold"),Spell(load_image('fspell.png'),20,"freeze"), Spell(load_image('shield.png'),20,"shield"), Spell(load_image('hspell.png'),40,"health"), Spell(load_image('sspell.png'),20,"speed"),Spell(load_image('rspell.png'),30,"rage")]
+
 
 while gamerun:
     font = pygame.font.Font(None, 20)
@@ -953,8 +1011,35 @@ while gamerun:
                 lvl = False
                 gamerun = False
             if event.type == pygame.MOUSEBUTTONDOWN:
-                if event.button == 1 and hero.manna >= 10:
+                if (event.button == 1) and (hero.manna >= 10) and (pygame.mouse.get_pos()[0] > 100):
                     hero.hero_fire()
+                elif (event.button == 1) and (pygame.mouse.get_pos()[0] < 100):
+                    y = pygame.mouse.get_pos()[1]
+                    n = (y-10)//70
+                    if shop[n].price <= hero.gold:
+                        hero.gold -= shop[n].price
+                        type = shop[n].type
+                        if type == "gold":
+                            hero.gold *= 2
+                        elif type == 'health':
+                            hero.health = 100
+                        else:
+                            if type == "freeze":
+                                color = (20, 20, 255)
+                            elif type == "shield":
+                                color = (240,240,240)
+                            elif type == "speed":
+                                color = (40,20,240)
+                            else:
+                                color = (240,30,30)
+                            flag = False
+                            for element in active_spell:
+                                if element.color == color:
+                                    element.time += 30
+                                    flag = True
+                            if not flag:
+                                active_spell.append(Timer(time.time()+30, color))
+                        del shop[n]
 
         screen.fill((0, 0, 0))
         camera.update(hero)
@@ -962,6 +1047,17 @@ while gamerun:
             camera.apply(sprite)
         all_sprites.draw(screen)
         all_sprites.update(event)
+        pygame.draw.rect(screen, (90,39,41),(0, 0, 100, 600) )
+        for i in range(len(shop)):
+            screen.blit(shop[i].image, (20,10+i*70))
+            screen.blit(pygame.font.Font(None, 20).render(str(shop[i].price), 1, (255, 255, 25)),
+                        (60, 70+i*70))
+        for i in active_spell:
+            screen.blit(pygame.font.Font(None, 20).render(str(int(i.time-time.time())), 1, i.color),
+                        (500 - active_spell.index(i)*40, 20))
+            i.update()
+
+
 
     elif future:
         screen.fill((0, 0, 0))
