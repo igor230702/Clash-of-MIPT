@@ -3,7 +3,7 @@ import random
 import math
 import time
 
-from constants import LABELS, Frases, SCREENSIZE, WIDTH, HEIGHT, FireBall_constants, MageFireBall_constants, Spell_constants, Tree_constants
+from constants import *
 
 # проверка связи
 pygame.init()
@@ -37,17 +37,7 @@ def static_labels():
     pygame.draw.rect(screen, (123, 0, 123), (435, 90, 150, 30), 1)
     screen.blit(font.render(LABELS[1], 1, (255, 255, 255), (0, 0, 0)), (100 + xl, 150 + yl))
     pygame.draw.rect(screen, (123, 0, 123), (90 + xl, 140 + yl, 130, 30), 1)
-    if save:
-        screen.blit(font.render(LABELS[2], 1, (255, 255, 255), (0, 0, 0)), (100 + xl, 200 + yl))
-        pygame.draw.rect(screen, (123, 0, 123), (90 + xl, 190 + yl, 130, 30), 1)
-    else:
-        screen.blit(font.render(LABELS[2], 1, (100, 100, 100), (0, 0, 0)), (100 + xl, 200 + yl))
-        pygame.draw.rect(screen, (123, 0, 123), (90 + xl, 190 + yl, 130, 30), 1)
-    screen.blit(font.render(LABELS[3], 1, (255, 255, 255), (0, 0, 0)), (100 + xl, 250 + yl))
-    pygame.draw.rect(screen, (123, 0, 123), (90 + xl, 240 + yl, 130, 30), 1)
-    screen.blit(font.render(LABELS[4], 1, (255, 255, 255), (0, 0, 0)), (100 + xl, 300 + yl))
-    pygame.draw.rect(screen, (123, 0, 123), (90 + xl, 290 + yl, 130, 30), 1)
-    screen.blit(font.render(LABELS[5], 1, (255, 255, 255), (0, 0, 0)), (100 + xl, 350 + yl))
+    screen.blit(font.render(LABELS[2], 1, (255, 255, 255), (0, 0, 0)), (100 + xl, 350 + yl))
     pygame.draw.rect(screen, (123, 0, 123), (90 + xl, 340 + yl, 130, 30), 1)
 
 
@@ -56,7 +46,7 @@ def Saves(save='r'):
     saves = open("saves.txt", save)
     if save == 'r':
         s = saves.readlines()
-        if s == []:
+        if not s:
             return False
         else:
             K, Flag, dialog, menu = int(s[0].split()[0]), *[bool(int(i)) for i in s[0].split()[1:]]
@@ -217,7 +207,7 @@ class Enemy(pygame.sprite.Sprite):
         if self.rect.colliderect(hero):
             hero.change_health(-self.damage)
             if hero.is_kicking:
-                self.change_health(int(-1 * hero.attack_coef))
+                self.change_health(-0.3 * hero.attack_coef)
         # движение врагов
         lx = self.rect.x - hero.rect.x
         ly = self.rect.y - hero.rect.y
@@ -360,13 +350,13 @@ class Mage(pygame.sprite.Sprite):
                 self.change_health(int(-5 * hero.attack_coef))
         if self.rect.colliderect(hero):
             if hero.is_kicking:
-                self.change_health(int(-1 * hero.attack_coef))
+                self.change_health(-0.3 * hero.attack_coef)
 
         # движение врагов
         lx = self.rect.x - hero.rect.x
         ly = self.rect.y - hero.rect.y
         l = lx ** 2 + ly ** 2
-        far = l > 200 ** 2 and l < 400 ** 2
+        far = 200 ** 2 < l < 400 ** 2
         near = l < 180 ** 2
         if far or near:
             self.v = int(4 * self.alpha)
@@ -400,7 +390,7 @@ class Mage(pygame.sprite.Sprite):
                 self.rect.y += d["dy"]
                 zomb_collision = False
                 for mag in mages_group:
-                    if (mag != self and pygame.sprite.collide_mask(self, mag)):
+                    if mag != self and pygame.sprite.collide_mask(self, mag):
                         zomb_collision = True
                         break
                 if pygame.sprite.collide_mask(self, walls) or zomb_collision:  # проверяем его на пригодность
@@ -436,13 +426,13 @@ class Mage(pygame.sprite.Sprite):
         if y - self.rect.y > 0 and x - self.rect.x > 0:
             tan = (y - self.rect.y) / (x - self.rect.x)
             phi = math.atan(tan)
-        if y - self.rect.y > 0 and x - self.rect.x < 0:
+        if y - self.rect.y > 0 > x - self.rect.x:
             tan = (y - self.rect.y) / (x - self.rect.x)
             phi = math.atan(tan) + math.pi
         if y - self.rect.y < 0 and x - self.rect.x < 0:
             tan = (y - self.rect.y) / (x - self.rect.x)
             phi = math.atan(tan) + math.pi
-        if y - self.rect.y < 0 and x - self.rect.x > 0:
+        if y - self.rect.y < 0 < x - self.rect.x:
             tan = (y - self.rect.y) / (x - self.rect.x)
             phi = math.atan(tan)
         if y == self.rect.y:
@@ -461,71 +451,69 @@ class Mage(pygame.sprite.Sprite):
 class MainHero(pygame.sprite.Sprite):
     """Класс главного героя. Что умеет:
     1. бегает
-    2. стреляет фаерболлами"""
+    2. стреляет фаерболлами
+    3. дерется в ближнем бою
+    """
     image = load_image("hero.png")
 
     def __init__(self, frames_right, frames_left, frames_stand_left, frames_stand_right, frames_left_shouting,
                  frames_right_shouting, frames_left_kicking, frames_right_kicking, frames_stand_left_shouting,
                  frames_stand_right_shouting, frames_stand_left_kick, frames_stand_right_kick, start_pos, *groups):
         super().__init__(*groups)
-        self.frames_right = frames_right
-        self.frames_left = frames_left
-        self.frames_stand_left = frames_stand_left #кадры застоя влево
-        self.frames_stand_right_shouting = frames_stand_right_shouting #кадры стрельбы вправо стоя
-        self.frames_stand_left_shouting = frames_stand_left_shouting #кадры стрельбы влево стоя
-        self.frames_stand_right_kick = frames_stand_right_kick #кадры удара вправо стоя
-        self.frames_stand_left_kick = frames_stand_left_kick #кадры удара вправо стоя
-        self.frames_stand_right = frames_stand_right #кадры застоя вправо
-        self.frames_right_shouting = frames_right_shouting #кадры выстрела вправо
-        self.frames_left_shouting = frames_left_shouting #кадры выстрела влево
-        self.frames_right_kicking = frames_right_kicking #кадры удара вправо
-        self.frames_left_kicking = frames_left_kicking #кадры удара влево
+        self.frames_right = frames_right  # кадры движения вправо
+        self.frames_left = frames_left  # кадры движения влево
+        self.frames_stand_left = frames_stand_left  # кадры застоя влево
+        self.frames_stand_right_shouting = frames_stand_right_shouting  # кадры стрельбы вправо стоя
+        self.frames_stand_left_shouting = frames_stand_left_shouting  # кадры стрельбы влево стоя
+        self.frames_stand_right_kick = frames_stand_right_kick  # кадры удара вправо стоя
+        self.frames_stand_left_kick = frames_stand_left_kick  # кадры удара вправо стоя
+        self.frames_stand_right = frames_stand_right  # кадры застоя вправо
+        self.frames_right_shouting = frames_right_shouting  # кадры выстрела вправо
+        self.frames_left_shouting = frames_left_shouting  # кадры выстрела влево
+        self.frames_right_kicking = frames_right_kicking  # кадры удара вправо
+        self.frames_left_kicking = frames_left_kicking  # кадры удара влево
         self.cur_frame = 0
         self.frame_count = 0
-        self.gold = 100
-        self.kills = 0
-        self.attack_coef = 1 # множитель при нанесении урона
+        self.gold = MainHero_constants.gold  # золото, за которое покупаются зелья
+        self.kills = 0  # киллы
+        self.attack_coef = 1  # множитель при нанесении урона
         self.image = self.frames_right[self.cur_frame]
         self.rect = self.image.get_rect()
         self.rect.x = start_pos[0]
         self.rect.y = start_pos[1]
         self.realx = self.realy = 0
         self.mask = pygame.mask.from_surface(self.image)
-        self.vector = 1
-        # скорость гг
-        self.v = 5
+        self.vector = 1  # направление движения
+        self.v = MainHero_constants.v  # скорость
         self.vector_left_right = 1
-        self.vector_stand = 1
-        self.health = 100
-        self.manna = 100
-        # проверка на остановку
-        self.stand = True
-        # чтобы перс не застрявал в верхних стенах
-        self.in_wall_prison = False
-        # проверка на стрельбу
-        self.is_shouting = False
-        # проверка на рукопашку
-        self.is_kicking = False
+        self.health = MainHero_constants.health  # хп
+        self.manna = MainHero_constants.manna  # манна
+        self.stand = True  # проверка на остановку
+        self.is_shouting = False  # проверка на стрельбу
+        self.is_kicking = False  # проверка на рукопашку
 
     def update(self, *args):
 
         buttons = pygame.key.get_pressed()
-        pygame.draw.rect(screen, (255, 255, 255), (WIDTH - 130, 20, 100, 10))
-        pygame.draw.rect(screen, (255, 255, 255), (WIDTH - 130, 40, 100, 10))
-        pygame.draw.rect(screen, (255, 0, 0), (WIDTH - 130, 20, int(hero.health), 10))
-        pygame.draw.rect(screen, (0, 0, 255), (WIDTH - 130, 40, int(hero.manna), 10))
+        pygame.draw.rect(screen, (255, 255, 255), (WIDTH - 130, 20, 100, 10))  # белый фон
+        pygame.draw.rect(screen, (255, 255, 255), (WIDTH - 130, 40, 100, 10))  # под полосками
+        pygame.draw.rect(screen, (255, 0, 0), (WIDTH - 130, 20, int(hero.health), 10))  # отрисовка полоски ХП
+        pygame.draw.rect(screen, (0, 0, 255), (WIDTH - 130, 40, int(hero.manna), 10))  # отрисовка полоски манны
 
-        screen.blit(pygame.font.Font(None, 30).render('Kills: ' + str(self.kills), 1, (255, 0, 0)), (WIDTH - 240, 20))
-        screen.blit(pygame.font.Font(None, 30).render('Gold: ' + str(self.gold), 1, (255, 211, 25)), (WIDTH - 240, 40))
-        if pygame.mouse.get_pressed()[0] and (self.manna >= 10) and (pygame.mouse.get_pos()[0] > 100): # проверка на стрельбу
+        screen.blit(pygame.font.Font(None, 30).render('Kills: ' + str(self.kills), 1, (255, 0, 0)),
+                    (WIDTH - 240, 20))  # отрисовка количества киллов
+        screen.blit(pygame.font.Font(None, 30).render('Gold: ' + str(self.gold), 1, (255, 211, 25)),
+                    (WIDTH - 240, 40))  # отрисовка количества золота
+        if pygame.mouse.get_pressed()[0] and (self.manna >= 10) and (
+                pygame.mouse.get_pos()[0] > 100):  # проверка на стрельбу
             self.is_shouting = True
         else:
             self.is_shouting = False
-        if buttons[pygame.K_e] and (self.manna >= 5): # проверка на удар
+        if buttons[pygame.K_e] and (self.manna >= 5):  # проверка на удар
             self.is_kicking = True
         else:
             self.is_kicking = False
-        if buttons[pygame.K_w]:
+        if buttons[pygame.K_w]:  # движение вперед
             self.vector = 3
             self.rect.y -= self.v
             if pygame.sprite.collide_mask(self, walls):
@@ -533,14 +521,14 @@ class MainHero(pygame.sprite.Sprite):
             else:
                 self.stand = False
 
-        if buttons[pygame.K_s]:
+        if buttons[pygame.K_s]:  # движение назад
             self.vector = 4
             self.rect.y += self.v
             if pygame.sprite.collide_mask(self, walls):
                 self.rect.y -= self.v
             else:
                 self.stand = False
-        if buttons[pygame.K_d]:
+        if buttons[pygame.K_d]:  # движение вправо
             self.vector = 1
             self.vector_left_right = 1
             self.rect.x += self.v
@@ -548,7 +536,7 @@ class MainHero(pygame.sprite.Sprite):
                 self.rect.x -= self.v
             else:
                 self.stand = False
-        if buttons[pygame.K_a]:
+        if buttons[pygame.K_a]:  # движение влево
             self.vector = 2
             self.vector_left_right = 2
             self.rect.x -= self.v
@@ -559,14 +547,15 @@ class MainHero(pygame.sprite.Sprite):
 
         if self.frame_count % 5 == 0:
             hero.change_manna(0.2)
-            for i in manna_upper_real_coordinates: #вблизи ли герой дерева подъема манны
-                if ((hero.realx) - (i[0])) ** 2 + ((hero.realy) - (i[1])) ** 2 < 10000:
+            for i in manna_upper_real_coordinates:  # вблизи ли герой дерева подъема манны
+                if (hero.realx - (i[0])) ** 2 + (hero.realy - (i[1])) ** 2 < 10000:
                     hero.change_manna(0.5)
-            for i in health_upper_real_coordinates: #вблизи ли герой дерева подъема здоровья
-                if ((hero.realx) - (i[0])) ** 2 + ((hero.realy) - (i[1])) ** 2 < 10000:
+            for i in health_upper_real_coordinates:  # вблизи ли герой дерева подъема здоровья
+                if (hero.realx - (i[0])) ** 2 + (hero.realy - (i[1])) ** 2 < 10000:
                     hero.change_health(0.5)
 
-            if not self.is_shouting and not self.is_kicking:
+            # анимации
+            if not self.is_shouting and not self.is_kicking:  # просто идет или стоит
                 if not self.stand:
                     if self.vector_left_right == 1:
                         self.cur_frame = (self.cur_frame + 1) % len(self.frames_right)
@@ -581,7 +570,7 @@ class MainHero(pygame.sprite.Sprite):
                     if self.vector_left_right == 2:
                         self.cur_frame = (self.cur_frame + 1) % len(self.frames_left)
                         self.image = self.frames_stand_left[self.cur_frame]
-            elif self.is_shouting and not self.is_kicking:
+            elif self.is_shouting and not self.is_kicking:  # стреляет
 
                 if not self.stand:
                     if self.vector_left_right == 1:
@@ -597,7 +586,7 @@ class MainHero(pygame.sprite.Sprite):
                     if self.vector_left_right == 2:
                         self.cur_frame = (self.cur_frame + 1) % len(self.frames_left)
                         self.image = self.frames_stand_left_shouting[self.cur_frame]
-            else:
+            else:  # ближний бой
                 hero.change_manna(-3)
                 if not self.stand:
                     if self.vector_left_right == 1:
@@ -614,7 +603,8 @@ class MainHero(pygame.sprite.Sprite):
                         self.cur_frame = (self.cur_frame + 1) % len(self.frames_left)
                         self.image = self.frames_stand_left_kick[self.cur_frame]
 
-        if not (buttons[pygame.K_UP] or buttons[pygame.K_DOWN] or buttons[pygame.K_RIGHT] or buttons[pygame.K_LEFT]):
+        if not (buttons[pygame.K_UP] or buttons[pygame.K_DOWN] or buttons[pygame.K_RIGHT] or buttons[
+            pygame.K_LEFT]):  # если ничего не нажато, то герой стоит
             self.stand = True
         self.frame_count += 1
 
@@ -624,13 +614,13 @@ class MainHero(pygame.sprite.Sprite):
         if y - hero.rect.y > 0 and x - hero.rect.x > 0:
             tan = (y - hero.rect.y) / (x - hero.rect.x)
             phi = math.atan(tan)
-        if y - hero.rect.y > 0 and x - hero.rect.x < 0:
+        if y - hero.rect.y > 0 > x - hero.rect.x:
             tan = (y - hero.rect.y) / (x - hero.rect.x)
             phi = math.atan(tan) + math.pi
         if y - hero.rect.y < 0 and x - hero.rect.x < 0:
             tan = (y - hero.rect.y) / (x - hero.rect.x)
             phi = math.atan(tan) + math.pi
-        if y - hero.rect.y < 0 and x - hero.rect.x > 0:
+        if y - hero.rect.y < 0 < x - hero.rect.x:
             tan = (y - hero.rect.y) / (x - hero.rect.x)
             phi = math.atan(tan)
         if y == hero.rect.y:
@@ -644,10 +634,10 @@ class MainHero(pygame.sprite.Sprite):
             elif y - hero.rect.y < 0:
                 phi = - math.pi / 2
 
-        FireBall(self.rect.x + 10, self.rect.y - 5, 0, phi, all_sprites, fireballs)
+        FireBall(self.rect.x + 10, self.rect.y - 5, 0, phi, all_sprites, fireballs)  # пускаем файербол под нужным углом
         hero.change_manna(-10)
 
-    def change_health(self, value):
+    def change_health(self, value):  # изменение хп
         if (self.health + value <= 100) and (self.health + value >= 0):
             self.health += value
         elif self.health + value <= 0:
@@ -655,7 +645,7 @@ class MainHero(pygame.sprite.Sprite):
         else:
             self.health = 100
 
-    def change_manna(self, value):
+    def change_manna(self, value):  # изменение манны
         if (self.manna + value <= 100) and (self.manna + value >= 0):
             self.manna += value
         elif self.manna + value <= 0:
@@ -733,6 +723,7 @@ class Walls(pygame.sprite.Sprite):
 
 class Tree(pygame.sprite.Sprite):
     '''Класс рисуемых деревьев, могут стоять'''
+
     def __init__(self, tree_image, coords, *groups):
         super().__init__(*groups)
         self.image = tree_image
@@ -772,7 +763,7 @@ class Camera:
     def apply(self, obj):
         obj.rect.x += self.dx
         obj.rect.y += self.dy
-        if obj is hero: #пересчитываем координаты героя в базисе карты/мира
+        if obj is hero:  # пересчитываем координаты героя в базисе карты/мира
             hero.realx -= self.dx
             hero.realy -= self.dy
 
@@ -797,25 +788,14 @@ def draw_trap():
 
 camera = Camera()
 
-all_sprites = pygame.sprite.Group()
-enemy_group = pygame.sprite.Group()
-fireballs = pygame.sprite.Group()
-traps = pygame.sprite.Group()
-mages_group = pygame.sprite.Group()
-mage_fireballs = pygame.sprite.Group()
-objects = pygame.sprite.Group()
-
-mage_counter = 0  # счётчик, чтобы стреляли маги
-lvl_num = 1  # номер уровня
-
+K = -1
 k = 0
 fps = 60
-K = -1
 xl, yl = 0, 50
-save = False
 Flag = False
 dialog = False  # если хотим увидеть предысторию, то надо поставить значение True
 gamerun = True
+gameover = False
 menu = True
 lvl = False
 # music('TownTheme.mp3')
@@ -827,8 +807,8 @@ x_walls, y_walls = 0, 0
 future = False
 is_hero = False
 
-is_shield_timer = True # включен ли щит
-fixed_hero_health = 0 # уровень здоровья при включеннном щите
+is_shield_timer = True  # включен ли щит
+fixed_hero_health = 0  # уровень здоровья при включеннном щите
 
 
 class Timer:
@@ -836,6 +816,7 @@ class Timer:
     time - оставшееся время
     color - тип таймера, и его цвет
     def update - обновляем таймер и проверяем нужно ли продолжать применять зелье'''
+
     def __init__(self, time, color):
         self.time = time
         self.color = color
@@ -861,14 +842,14 @@ class Timer:
             # если время еще не вышло - применяем изменения
             if self.color == Spell_constants.BLUE:
                 for i in enemy_group:
-                    i.alpha = Spell_constants.slow_motion_alpha #замедляем врагов
+                    i.alpha = Spell_constants.slow_motion_alpha  # замедляем врагов
                 for i in mages_group:
-                    i.alpha = Spell_constants.slow_motion_alpha #замедляем магов
+                    i.alpha = Spell_constants.slow_motion_alpha  # замедляем магов
             elif self.color == Spell_constants.GREEN:
-                hero.v = Spell_constants.fast_motion_herov # ускоряем героя
+                hero.v = Spell_constants.fast_motion_herov  # ускоряем героя
             elif self.color == Spell_constants.WHITE:
                 if is_shield_timer:
-                    fixed_hero_health = hero.health # узнаем уровень здоровья врага и фиксируем
+                    fixed_hero_health = hero.health  # узнаем уровень здоровья врага и фиксируем
                     is_shield_timer = False
                 if not is_shield_timer:
                     hero.health = fixed_hero_health
@@ -878,48 +859,26 @@ class Timer:
 
 class Spell:
     '''Класс зелье. Хранит информацию в себе о зелье. Объекты класса содержатся в магазине.'''
+
     def __init__(self, image, price, type):
         self.image = image
         self.price = price
         self.type = type
 
 
-active_spell = [] # примененные зелья
+active_spell = []  # примененные зелья
 possible_spells = [Spell(load_image('spell.png'), 50, "gold"), Spell(load_image('fspell.png'), 20, "freeze"),
                    Spell(load_image('shield.png'), 20, "shield"), Spell(load_image('hspell.png'), 40, "health"),
-                   Spell(load_image('sspell.png'), 20, "speed"), Spell(load_image('rspell.png'), 30, "rage")] # весь ассортимент зелий
+                   Spell(load_image('sspell.png'), 20, "speed"),
+                   Spell(load_image('rspell.png'), 30, "rage")]  # весь ассортимент зелий
 shop = [Spell(load_image('spell.png'), 50, "gold"), Spell(load_image('fspell.png'), 20, "freeze"),
         Spell(load_image('shield.png'), 20, "shield"), Spell(load_image('hspell.png'), 40, "health"),
-        Spell(load_image('sspell.png'), 20, "speed"), Spell(load_image('rspell.png'), 30, "rage")] # зелья в магазине
+        Spell(load_image('sspell.png'), 20, "speed"), Spell(load_image('rspell.png'), 30, "rage")]  # зелья в магазине
 
 while gamerun:
     font = pygame.font.Font(None, 20)
-    if dialog:
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                gamerun = False
-            if event.type == pygame.MOUSEBUTTONDOWN:
-                if event.button == 1:
-                    if Flag is False and K < 14:
-                        K += 1
-                        Flag = True
-                    elif Flag is True and K < 14:
-                        K += 1
-                    else:
-                        Flag = False
-                        lvl = True
-                        dialog = False
-        screen.fill((10, 10, 10))
-        if Flag:
-            if K not in [2, 5]:
-                screen.blit(font.render(Frases[K], 1, (255, 0, 0), (0, 0, 0)), (0, 401))
-            elif K == 2:
-                screen.blit(font.render(Frases[K], 1, (255, 0, 0), (0, 0, 0)), (0, 401))
-            elif K == 5:
-                pass
-        pygame.draw.line(screen, (123, 0, 123), [0, 400], [1000, 400], 1)
-        pygame.display.flip()
-    elif menu:
+
+    if menu:
         screen.fill((10, 10, 10))
         screen.blit(pygame.transform.scale(load_image('worldmap.png'), (WIDTH, HEIGHT)), (0, 0))
         static_labels()
@@ -936,11 +895,22 @@ while gamerun:
                     Saves('w')
                     gamerun = False
                 if event.button == 1 and (90 < (x - xl) < 220) and ((290 < (y - yl) < 320) or (240 < (y - yl) < 270)):
-                    future = True
+                    gameover = True
                     menu = False
     elif lvl:
         if not is_hero:
             is_hero = True
+            all_sprites = pygame.sprite.Group()
+            enemy_group = pygame.sprite.Group()
+            fireballs = pygame.sprite.Group()
+            traps = pygame.sprite.Group()
+            mages_group = pygame.sprite.Group()
+            mage_fireballs = pygame.sprite.Group()
+            objects = pygame.sprite.Group()
+
+            mage_counter = 0  # счётчик, чтобы стреляли маги
+            lvl_num = 1  # номер уровня
+
             floor = Floor(all_sprites)
             walls = Walls(all_sprites)
             spikes = Spikes(all_sprites, traps)
@@ -1003,9 +973,9 @@ while gamerun:
                              load_image("stait_vpravo_kick8.png")],
                             (800, 300),
                             all_sprites)
-            for i in manna_upper_coordinates: # рисуем деревья манны
+            for i in manna_upper_coordinates:  # рисуем деревья манны
                 Tree(pygame.transform.scale(load_image("manna_upper.png"), (234, 275)), i, all_sprites, objects)
-            for i in health_upper_coordinates: # рисуем деревья здоровья
+            for i in health_upper_coordinates:  # рисуем деревья здоровья
                 Tree(pygame.transform.scale(load_image("health_upper.png"), (177, 273)), i, all_sprites, objects)
 
         if not (mages_group or enemy_group):  # переход на следующий уровень
@@ -1025,63 +995,66 @@ while gamerun:
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if (event.button == 1) and (hero.manna >= 10) and (pygame.mouse.get_pos()[0] > 100):
                     hero.hero_fire()
-                elif (event.button == 1) and (pygame.mouse.get_pos()[0] < 100): #если кликаем на магазин
+                elif (event.button == 1) and (pygame.mouse.get_pos()[0] < 100):  # если кликаем на магазин
                     y = pygame.mouse.get_pos()[1]
                     n = (y - 10) // 70
-                    if shop[n].price <= hero.gold: # если покупка возможна
-                        hero.gold -= shop[n].price
-                        type = shop[n].type
-                        if type == "gold":
-                            hero.gold *= 2
-                        elif type == 'health':
-                            hero.health = 100
-                        else:
-                            if type == "freeze":
-                                color = Spell_constants.BLUE
-                            elif type == "shield":
-                                color = Spell_constants.WHITE
-                            elif type == "speed":
-                                color = Spell_constants.GREEN
+                    if 0 < n < len(shop):
+                        if shop[n].price <= hero.gold:  # если покупка возможна
+                            hero.gold -= shop[n].price
+                            type = shop[n].type
+                            if type == "gold":
+                                hero.gold *= 2
+                            elif type == 'health':
+                                hero.health = 100
                             else:
-                                color = Spell_constants.RED
-                            flag = False
-                            for element in active_spell: # если такое зелье еще активно, то просто добавляем к времени действия 30 сек
-                                if element.color == color:
-                                    element.time += 30
-                                    flag = True
-                            if not flag: # иначе, добавляем новый таймер для этого зелья
-                                active_spell.append(Timer(time.time() + 30, color))
-                        del shop[n]
+                                if type == "freeze":
+                                    color = Spell_constants.BLUE
+                                elif type == "shield":
+                                    color = Spell_constants.WHITE
+                                elif type == "speed":
+                                    color = Spell_constants.GREEN
+                                else:
+                                    color = Spell_constants.RED
+                                flag = False
+                                for element in active_spell:  # если такое зелье еще активно, то просто добавляем к времени действия 30 сек
+                                    if element.color == color:
+                                        element.time += 30
+                                        flag = True
+                                if not flag:  # иначе, добавляем новый таймер для этого зелья
+                                    active_spell.append(Timer(time.time() + 30, color))
+                            del shop[n]
 
         screen.fill((0, 0, 0))
+        if hero.health == 0:
+            lvl = False
+            gameover = True
+            is_hero = False
         camera.update(hero)
         for sprite in all_sprites:
             camera.apply(sprite)
         all_sprites.draw(screen)
         all_sprites.update(event)
         pygame.draw.rect(screen, (90, 39, 41), (0, 0, 100, 600))
-        for i in range(len(shop)): # для каждого зелья в магазине рисуем его
+        for i in range(len(shop)):  # для каждого зелья в магазине рисуем его
             screen.blit(shop[i].image, (20, 10 + i * 70))
             screen.blit(pygame.font.Font(None, 20).render(str(shop[i].price), 1, (255, 255, 25)),
                         (60, 70 + i * 70))
-        for i in active_spell: #для каждого активного зелья рисуем оставшееся время
+        for i in active_spell:  # для каждого активного зелья рисуем оставшееся время
             screen.blit(pygame.font.Font(None, 20).render(str(int(i.time - time.time())), 1, i.color),
                         (500 - active_spell.index(i) * 40, 20))
             i.update()
-
-
-
-    elif future:
+    elif gameover:
         screen.fill((0, 0, 0))
-        font = pygame.font.Font(None, 25)
-        screen.blit(font.render('Эта опция появится в будущих версиях.', 1, (255, 0, 0), (0, 0, 0)), (100, 100))
-        screen.blit(font.render('Вернуться в меню.', 1, (255, 0, 0), (0, 0, 0)), (420, 410))
+        screen.blit(pygame.font.Font(None, 40).render('Game over', 1, (255, 0, 0), (0, 0, 0)), (WIDTH / 2 - 60, 100))
+        screen.blit(pygame.font.Font(None, 30).render('Kills: ' + str(hero.kills), 1, (255, 0, 0)),
+                    (WIDTH / 2 - 60, 150))  # отрисовка количества киллов
+        screen.blit(font.render('Вернуться в меню.', 1, (255, 0, 0), (0, 0, 0)), (430, 410))
         pygame.draw.rect(screen, (123, 0, 123), (400, 400, 200, 30), 1)
         for event in pygame.event.get():
             if event.type == pygame.MOUSEBUTTONDOWN:
                 x, y = pygame.mouse.get_pos()
                 if event.button == 1 and (400 < x < 600) and (400 < y < 430):
-                    future = False
+                    gameover = False
                     menu = True
     pygame.display.update()
     pygame.display.flip()
