@@ -3,11 +3,16 @@ import random
 import math
 import time
 
-from constants import LABELS, Frases, SCREENSIZE, WIDTH, HEIGHT, FireBall_constants, MageFireBall_constants, Spell_constants, Tree_constants
+from constants import LABELS, SCREENSIZE, WIDTH, HEIGHT, FireBall_constants, MageFireBall_constants, \
+    Spell_constants, Tree_constants
+
+from config import FPS
 
 # проверка связи
 pygame.init()
-screen = pygame.display.set_mode(SCREENSIZE)  # , pygame.FULLSCREEN
+screen = pygame.display.set_mode(SCREENSIZE)  # , pygame.FULLSCREEN)
+# screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
+# screen = pygame.display.set_mode((640, 360), pygame.RESIZABLE)
 clock = pygame.time.Clock()
 pygame.display.set_caption('Super Game')
 manna_upper_coordinates = Tree_constants.manna_coords
@@ -37,32 +42,6 @@ def static_labels():
     pygame.draw.rect(screen, (123, 0, 123), (435, 90, 150, 30), 1)
     screen.blit(font.render(LABELS[1], 1, (255, 255, 255), (0, 0, 0)), (100 + xl, 150 + yl))
     pygame.draw.rect(screen, (123, 0, 123), (90 + xl, 140 + yl, 130, 30), 1)
-    if save:
-        screen.blit(font.render(LABELS[2], 1, (255, 255, 255), (0, 0, 0)), (100 + xl, 200 + yl))
-        pygame.draw.rect(screen, (123, 0, 123), (90 + xl, 190 + yl, 130, 30), 1)
-    else:
-        screen.blit(font.render(LABELS[2], 1, (100, 100, 100), (0, 0, 0)), (100 + xl, 200 + yl))
-        pygame.draw.rect(screen, (123, 0, 123), (90 + xl, 190 + yl, 130, 30), 1)
-    screen.blit(font.render(LABELS[3], 1, (255, 255, 255), (0, 0, 0)), (100 + xl, 250 + yl))
-    pygame.draw.rect(screen, (123, 0, 123), (90 + xl, 240 + yl, 130, 30), 1)
-    screen.blit(font.render(LABELS[4], 1, (255, 255, 255), (0, 0, 0)), (100 + xl, 300 + yl))
-    pygame.draw.rect(screen, (123, 0, 123), (90 + xl, 290 + yl, 130, 30), 1)
-    screen.blit(font.render(LABELS[5], 1, (255, 255, 255), (0, 0, 0)), (100 + xl, 350 + yl))
-    pygame.draw.rect(screen, (123, 0, 123), (90 + xl, 340 + yl, 130, 30), 1)
-
-
-def Saves(save='r'):
-    global K, Flag, dialog, menu
-    saves = open("saves.txt", save)
-    if save == 'r':
-        s = saves.readlines()
-        if s == []:
-            return False
-        else:
-            K, Flag, dialog, menu = int(s[0].split()[0]), *[bool(int(i)) for i in s[0].split()[1:]]
-            return True
-    if save == 'w':
-        saves.write(str(K) + ' ' + str(int(Flag)) + ' ' + str(int(dialog)) + ' ' + str(int(menu)))
 
 
 screen_rect = (0, 0, WIDTH, HEIGHT)
@@ -70,72 +49,35 @@ screen_rect = (0, 0, WIDTH, HEIGHT)
 
 class FireBall(pygame.sprite.Sprite):
     """Фаерболлы. Что умеют:
-    при попадании во врага убивают его и исчезают"""
-    image = pygame.transform.scale(load_image("fireball_new.png"), (40, 40))
-
-    def __init__(self, x, y, vector, phi, *groups):
-        super().__init__(*groups)
-        self.image = self.image
-        self.rect = self.image.get_rect()
-        self.rect.x = x
-        self.rect.y = y
-        self.v = FireBall_constants.v  # скорость фаерболла
-        self.phi = phi
-        self.vector = vector  # направление движения фаербола
-
-    def update(self, *args):
-        if pygame.sprite.spritecollideany(self, enemy_group) or pygame.sprite.collide_mask(self, walls):
-            self.kill()
-        if not self.rect.colliderect(screen_rect):
-            self.kill()
-        else:
-            if self.vector == 1:
-                self.rect.x += self.v
-            if self.vector == 2:
-                self.rect.x -= self.v
-            if self.vector == 3:
-                self.rect.y -= self.v
-            if self.vector == 4:
-                self.rect.y += self.v
-            if self.vector == 0:  # если не задать направление. то он полетит под заданным углом
-                self.rect.x += self.v * math.cos(self.phi)
-                self.rect.y += self.v * math.sin(self.phi)
-
-
-class MageFireBall(pygame.sprite.Sprite):
-    """Фаерболлы мага. Что умеют:
     при попадании в героя наносят ему дамаг и исчезают, при этом не убивают магов"""
-    image = pygame.transform.scale(load_image("fireball_mage.png"), (40, 40))
+    mage_fireball_image = pygame.transform.scale(load_image("fireball_mage.png"), (40, 40))
+    hero_fireball_image = pygame.transform.scale(load_image("fireball_new.png"), (40, 40))
 
-    def __init__(self, x, y, vector, phi, *groups):
+    def __init__(self, x, y, phi, *groups):
         super().__init__(*groups)
-        self.image = self.image
+        if self in mage_fireballs:
+            self.image = self.mage_fireball_image
+        else:
+            self.image = self.hero_fireball_image
         self.rect = self.image.get_rect()
         self.rect.x = x
         self.rect.y = y
-        self.v = MageFireBall_constants.v  # скорость фаерболла
+        if self in mage_fireballs:
+            self.v = MageFireBall_constants.v  # скорость фаерболла
+        else:
+            self.v = FireBall_constants.v
         self.phi = phi
-        self.vector = vector
         self.damage = MageFireBall_constants.damage  # его  урон
 
     def update(self, *args):
-        if self.rect.colliderect(hero) or pygame.sprite.collide_mask(self, walls):
+        if pygame.sprite.collide_mask(self, walls):
             self.kill()
-        if not self.rect.colliderect(screen_rect):
+        if self in mage_fireballs and self.rect.colliderect(hero):
             self.kill()
         else:
-            if self.vector == 1:
-                self.rect.x += self.v
-            if self.vector == 2:
-                self.rect.x -= self.v
-            if self.vector == 3:
-                self.rect.y -= self.v
-            if self.vector == 4:
-                self.rect.y += self.v
-            if self.vector == 0:  # если не задать направление. то он полетит под заданным углом
-                self.rect.x += self.v * math.cos(self.phi)
-                self.rect.y += self.v * math.sin(self.phi)
-        if self.rect.colliderect(hero):
+            self.rect.x += self.v * math.cos(self.phi)
+            self.rect.y += self.v * math.sin(self.phi)
+        if self.rect.colliderect(hero) and self in mage_fireballs:
             hero.change_health(-self.damage)
 
 
@@ -400,7 +342,7 @@ class Mage(pygame.sprite.Sprite):
                 self.rect.y += d["dy"]
                 zomb_collision = False
                 for mag in mages_group:
-                    if (mag != self and pygame.sprite.collide_mask(self, mag)):
+                    if mag != self and pygame.sprite.collide_mask(self, mag):
                         zomb_collision = True
                         break
                 if pygame.sprite.collide_mask(self, walls) or zomb_collision:  # проверяем его на пригодность
@@ -455,7 +397,7 @@ class Mage(pygame.sprite.Sprite):
                 phi = math.pi / 2
             elif y - self.rect.y < 0:
                 phi = - math.pi / 2
-        MageFireBall(self.rect.x + 35, self.rect.y + 10, 0, phi, all_sprites, mage_fireballs)
+        FireBall(self.rect.x + 35, self.rect.y + 10, phi, all_sprites, mage_fireballs)
 
 
 class MainHero(pygame.sprite.Sprite):
@@ -470,21 +412,21 @@ class MainHero(pygame.sprite.Sprite):
         super().__init__(*groups)
         self.frames_right = frames_right
         self.frames_left = frames_left
-        self.frames_stand_left = frames_stand_left #кадры застоя влево
-        self.frames_stand_right_shouting = frames_stand_right_shouting #кадры стрельбы вправо стоя
-        self.frames_stand_left_shouting = frames_stand_left_shouting #кадры стрельбы влево стоя
-        self.frames_stand_right_kick = frames_stand_right_kick #кадры удара вправо стоя
-        self.frames_stand_left_kick = frames_stand_left_kick #кадры удара вправо стоя
-        self.frames_stand_right = frames_stand_right #кадры застоя вправо
-        self.frames_right_shouting = frames_right_shouting #кадры выстрела вправо
-        self.frames_left_shouting = frames_left_shouting #кадры выстрела влево
-        self.frames_right_kicking = frames_right_kicking #кадры удара вправо
-        self.frames_left_kicking = frames_left_kicking #кадры удара влево
+        self.frames_stand_left = frames_stand_left  # кадры застоя влево
+        self.frames_stand_right_shouting = frames_stand_right_shouting  # кадры стрельбы вправо стоя
+        self.frames_stand_left_shouting = frames_stand_left_shouting  # кадры стрельбы влево стоя
+        self.frames_stand_right_kick = frames_stand_right_kick  # кадры удара вправо стоя
+        self.frames_stand_left_kick = frames_stand_left_kick  # кадры удара вправо стоя
+        self.frames_stand_right = frames_stand_right  # кадры застоя вправо
+        self.frames_right_shouting = frames_right_shouting  # кадры выстрела вправо
+        self.frames_left_shouting = frames_left_shouting  # кадры выстрела влево
+        self.frames_right_kicking = frames_right_kicking  # кадры удара вправо
+        self.frames_left_kicking = frames_left_kicking  # кадры удара влево
         self.cur_frame = 0
         self.frame_count = 0
         self.gold = 100
         self.kills = 0
-        self.attack_coef = 1 # множитель при нанесении урона
+        self.attack_coef = 1  # множитель при нанесении урона
         self.image = self.frames_right[self.cur_frame]
         self.rect = self.image.get_rect()
         self.rect.x = start_pos[0]
@@ -493,7 +435,7 @@ class MainHero(pygame.sprite.Sprite):
         self.mask = pygame.mask.from_surface(self.image)
         self.vector = 1
         # скорость гг
-        self.v = 5
+        self.v = 6
         self.vector_left_right = 1
         self.vector_stand = 1
         self.health = 100
@@ -517,11 +459,12 @@ class MainHero(pygame.sprite.Sprite):
 
         screen.blit(pygame.font.Font(None, 30).render('Kills: ' + str(self.kills), 1, (255, 0, 0)), (WIDTH - 240, 20))
         screen.blit(pygame.font.Font(None, 30).render('Gold: ' + str(self.gold), 1, (255, 211, 25)), (WIDTH - 240, 40))
-        if pygame.mouse.get_pressed()[0] and (self.manna >= 10) and (pygame.mouse.get_pos()[0] > 100): # проверка на стрельбу
+        if pygame.mouse.get_pressed()[0] and (self.manna >= 10) and (
+                pygame.mouse.get_pos()[0] > 100):  # проверка на стрельбу
             self.is_shouting = True
         else:
             self.is_shouting = False
-        if buttons[pygame.K_e] and (self.manna >= 5): # проверка на удар
+        if buttons[pygame.K_e] and (self.manna >= 5):  # проверка на удар
             self.is_kicking = True
         else:
             self.is_kicking = False
@@ -559,10 +502,10 @@ class MainHero(pygame.sprite.Sprite):
 
         if self.frame_count % 5 == 0:
             hero.change_manna(0.2)
-            for i in manna_upper_real_coordinates: #вблизи ли герой дерева подъема манны
+            for i in manna_upper_real_coordinates:  # вблизи ли герой дерева подъема манны
                 if ((hero.realx) - (i[0])) ** 2 + ((hero.realy) - (i[1])) ** 2 < 10000:
                     hero.change_manna(0.5)
-            for i in health_upper_real_coordinates: #вблизи ли герой дерева подъема здоровья
+            for i in health_upper_real_coordinates:  # вблизи ли герой дерева подъема здоровья
                 if ((hero.realx) - (i[0])) ** 2 + ((hero.realy) - (i[1])) ** 2 < 10000:
                     hero.change_health(0.5)
 
@@ -644,7 +587,7 @@ class MainHero(pygame.sprite.Sprite):
             elif y - hero.rect.y < 0:
                 phi = - math.pi / 2
 
-        FireBall(self.rect.x + 10, self.rect.y - 5, 0, phi, all_sprites, fireballs)
+        FireBall(self.rect.x + 10, self.rect.y - 5, phi, all_sprites, fireballs)
         hero.change_manna(-10)
 
     def change_health(self, value):
@@ -733,6 +676,7 @@ class Walls(pygame.sprite.Sprite):
 
 class Tree(pygame.sprite.Sprite):
     '''Класс рисуемых деревьев, могут стоять'''
+
     def __init__(self, tree_image, coords, *groups):
         super().__init__(*groups)
         self.image = tree_image
@@ -772,7 +716,7 @@ class Camera:
     def apply(self, obj):
         obj.rect.x += self.dx
         obj.rect.y += self.dy
-        if obj is hero: #пересчитываем координаты героя в базисе карты/мира
+        if obj is hero:  # пересчитываем координаты героя в базисе карты/мира
             hero.realx -= self.dx
             hero.realy -= self.dy
 
@@ -780,19 +724,6 @@ class Camera:
     def update(self, *args):
         self.dx = -(args[0].rect.x + args[0].rect.w // 2 - WIDTH // 2)
         self.dy = -(args[0].rect.y + args[0].rect.h // 2 - HEIGHT // 2)
-
-
-def draw_trap():
-    global k
-    im1 = load_image('trap1.png')
-    im0 = load_image('trap0.png')
-    f = load_image('firetrap.png')
-    if int(str(k)[-2::]) < 50:
-        screen.blit(im0, (100, 100))
-    else:
-        screen.blit(im1, (100, 100))
-        screen.blit(f, (200, 200))
-    k += 1
 
 
 camera = Camera()
@@ -808,13 +739,9 @@ objects = pygame.sprite.Group()
 mage_counter = 0  # счётчик, чтобы стреляли маги
 lvl_num = 1  # номер уровня
 
-k = 0
-fps = 60
-K = -1
+# fps = 60
 xl, yl = 0, 50
-save = False
-Flag = False
-dialog = False  # если хотим увидеть предысторию, то надо поставить значение True
+
 gamerun = True
 menu = True
 lvl = False
@@ -824,11 +751,10 @@ walls = load_image('стены_1(new).png')
 # начальное положение фоновых объектов
 x_fon, y_fon = 23, 45
 x_walls, y_walls = 0, 0
-future = False
 is_hero = False
 
-is_shield_timer = True # включен ли щит
-fixed_hero_health = 0 # уровень здоровья при включеннном щите
+is_shield_timer = True  # включен ли щит
+fixed_hero_health = 0  # уровень здоровья при включеннном щите
 
 
 class Timer:
@@ -836,6 +762,7 @@ class Timer:
     time - оставшееся время
     color - тип таймера, и его цвет
     def update - обновляем таймер и проверяем нужно ли продолжать применять зелье'''
+
     def __init__(self, time, color):
         self.time = time
         self.color = color
@@ -861,14 +788,14 @@ class Timer:
             # если время еще не вышло - применяем изменения
             if self.color == Spell_constants.BLUE:
                 for i in enemy_group:
-                    i.alpha = Spell_constants.slow_motion_alpha #замедляем врагов
+                    i.alpha = Spell_constants.slow_motion_alpha  # замедляем врагов
                 for i in mages_group:
-                    i.alpha = Spell_constants.slow_motion_alpha #замедляем магов
+                    i.alpha = Spell_constants.slow_motion_alpha  # замедляем магов
             elif self.color == Spell_constants.GREEN:
-                hero.v = Spell_constants.fast_motion_herov # ускоряем героя
+                hero.v = Spell_constants.fast_motion_herov  # ускоряем героя
             elif self.color == Spell_constants.WHITE:
                 if is_shield_timer:
-                    fixed_hero_health = hero.health # узнаем уровень здоровья врага и фиксируем
+                    fixed_hero_health = hero.health  # узнаем уровень здоровья врага и фиксируем
                     is_shield_timer = False
                 if not is_shield_timer:
                     hero.health = fixed_hero_health
@@ -878,48 +805,83 @@ class Timer:
 
 class Spell:
     '''Класс зелье. Хранит информацию в себе о зелье. Объекты класса содержатся в магазине.'''
+
     def __init__(self, image, price, type):
         self.image = image
         self.price = price
         self.type = type
 
 
-active_spell = [] # примененные зелья
+active_spell = []  # примененные зелья
 possible_spells = [Spell(load_image('spell.png'), 50, "gold"), Spell(load_image('fspell.png'), 20, "freeze"),
                    Spell(load_image('shield.png'), 20, "shield"), Spell(load_image('hspell.png'), 40, "health"),
-                   Spell(load_image('sspell.png'), 20, "speed"), Spell(load_image('rspell.png'), 30, "rage")] # весь ассортимент зелий
+                   Spell(load_image('sspell.png'), 20, "speed"),
+                   Spell(load_image('rspell.png'), 30, "rage")]  # весь ассортимент зелий
 shop = [Spell(load_image('spell.png'), 50, "gold"), Spell(load_image('fspell.png'), 20, "freeze"),
         Spell(load_image('shield.png'), 20, "shield"), Spell(load_image('hspell.png'), 40, "health"),
-        Spell(load_image('sspell.png'), 20, "speed"), Spell(load_image('rspell.png'), 30, "rage")] # зелья в магазине
+        Spell(load_image('sspell.png'), 20, "speed"), Spell(load_image('rspell.png'), 30, "rage")]  # зелья в магазине
+
+hero_images = [[load_image("bomzh_vprapo_okonchat0.png"), load_image("bomzh_vprapo_okonchat1.png"),
+                load_image("bomzh_vprapo_okonchat2.png"), load_image("bomzh_vprapo_okonchat3.png"),
+                load_image("bomzh_vprapo_okonchat4.png"), load_image("bomzh_vprapo_okonchat5.png"),
+                load_image("bomzh_vprapo_okonchat6.png"),
+                load_image("bomzh_vprapo_okonchat7.png")],
+               [load_image("bomzh_vlevo_okonchat0.png"), load_image("bomzh_vlevo_okonchat1.png"),
+                load_image("bomzh_vlevo_okonchat2.png"), load_image("bomzh_vlevo_okonchat3.png"),
+                load_image("bomzh_vlevo_okonchat4.png"), load_image("bomzh_vlevo_okonchat5.png"),
+                load_image("bomzh_vlevo_okonchat6.png"), load_image("bomzh_vlevo_okonchat7.png")],
+               [load_image("stait_vlevo00.png"), load_image("stait_vlevo01.png"),
+                load_image("stait_vlevo02.png"), load_image("stait_vlevo03.png"),
+                load_image("stait_vlevo04.png"), load_image("stait_vlevo14.png"),
+                load_image("stait_vlevo15.png"), load_image("stait_vlevo16.png"),
+                load_image("stait_vlevo17.png")],
+               [load_image("stait_vpravo00.png"), load_image("stait_vpravo01.png"),
+                load_image("stait_vpravo02.png"), load_image("stait_vpravo03.png"),
+                load_image("stait_vpravo04.png"), load_image("stait_vpravo14.png"),
+                load_image("stait_vpravo15.png"), load_image("stait_vpravo16.png"),
+                load_image("stait_vpravo17.png")],
+               [load_image("bomzh_vlevo_shout0.png"), load_image("bomzh_vlevo_shout1.png"),
+                load_image("bomzh_vlevo_shout2.png"), load_image("bomzh_vlevo_shout3.png"),
+                load_image("bomzh_vlevo_shout4.png"), load_image("bomzh_vlevo_shout5.png"),
+                load_image("bomzh_vlevo_shout6.png"), load_image("bomzh_vlevo_shout7.png")],
+               [load_image("bomzh_vprapo_shout0.png"), load_image("bomzh_vprapo_shout1.png"),
+                load_image("bomzh_vprapo_shout2.png"), load_image("bomzh_vprapo_shout3.png"),
+                load_image("bomzh_vprapo_shout4.png"), load_image("bomzh_vprapo_shout5.png"),
+                load_image("bomzh_vprapo_shout6.png"),
+                load_image("bomzh_vprapo_shout7.png")],
+               [load_image("bomzh_vlevo_kick0.png"), load_image("bomzh_vlevo_kick1.png"),
+                load_image("bomzh_vlevo_kick2.png"), load_image("bomzh_vlevo_kick3.png"),
+                load_image("bomzh_vlevo_kick4.png"), load_image("bomzh_vlevo_kick5.png"),
+                load_image("bomzh_vlevo_kick6.png"), load_image("bomzh_vlevo_kick7.png")],
+               [load_image("bomzh_vprapo_kick0.png"), load_image("bomzh_vprapo_kick1.png"),
+                load_image("bomzh_vprapo_kick2.png"), load_image("bomzh_vprapo_kick3.png"),
+                load_image("bomzh_vprapo_kick4.png"), load_image("bomzh_vprapo_kick5.png"),
+                load_image("bomzh_vprapo_kick6.png"),
+                load_image("bomzh_vprapo_kick7.png")],
+               [load_image("stait_vlevo_shout0.png"), load_image("stait_vlevo_shout1.png"),
+                load_image("stait_vlevo_shout2.png"), load_image("stait_vlevo_shout3.png"),
+                load_image("stait_vlevo_shout4.png"), load_image("stait_vlevo_shout5.png"),
+                load_image("stait_vlevo_shout6.png"), load_image("stait_vlevo_shout7.png"),
+                load_image("stait_vlevo_shout8.png")],
+               [load_image("stait_vpravo_shout0.png"), load_image("stait_vpravo_shout1.png"),
+                load_image("stait_vpravo_shout2.png"), load_image("stait_vpravo_shout3.png"),
+                load_image("stait_vpravo_shout4.png"), load_image("stait_vpravo_shout5.png"),
+                load_image("stait_vpravo_shout6.png"), load_image("stait_vpravo_shout7.png"),
+                load_image("stait_vpravo_shout8.png")],
+               [load_image("stait_vlevo_kick0.png"), load_image("stait_vlevo_kick1.png"),
+                load_image("stait_vlevo_kick2.png"), load_image("stait_vlevo_kick3.png"),
+                load_image("stait_vlevo_kick4.png"), load_image("stait_vlevo_kick5.png"),
+                load_image("stait_vlevo_kick6.png"), load_image("stait_vlevo_kick7.png"),
+                load_image("stait_vlevo_kick8.png")],
+               [load_image("stait_vpravo_kick0.png"), load_image("stait_vpravo_kick1.png"),
+                load_image("stait_vpravo_kick2.png"), load_image("stait_vpravo_kick3.png"),
+                load_image("stait_vpravo_kick4.png"), load_image("stait_vpravo_kick5.png"),
+                load_image("stait_vpravo_kick6.png"), load_image("stait_vpravo_kick7.png"),
+                load_image("stait_vpravo_kick8.png")]]
 
 while gamerun:
     font = pygame.font.Font(None, 20)
-    if dialog:
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                gamerun = False
-            if event.type == pygame.MOUSEBUTTONDOWN:
-                if event.button == 1:
-                    if Flag is False and K < 14:
-                        K += 1
-                        Flag = True
-                    elif Flag is True and K < 14:
-                        K += 1
-                    else:
-                        Flag = False
-                        lvl = True
-                        dialog = False
-        screen.fill((10, 10, 10))
-        if Flag:
-            if K not in [2, 5]:
-                screen.blit(font.render(Frases[K], 1, (255, 0, 0), (0, 0, 0)), (0, 401))
-            elif K == 2:
-                screen.blit(font.render(Frases[K], 1, (255, 0, 0), (0, 0, 0)), (0, 401))
-            elif K == 5:
-                pass
-        pygame.draw.line(screen, (123, 0, 123), [0, 400], [1000, 400], 1)
-        pygame.display.flip()
-    elif menu:
+    if menu:
         screen.fill((10, 10, 10))
         screen.blit(pygame.transform.scale(load_image('worldmap.png'), (WIDTH, HEIGHT)), (0, 0))
         static_labels()
@@ -932,80 +894,19 @@ while gamerun:
                     # dialog = True
                     lvl = True
                     menu = False
-                if event.button == 1 and (90 < (x - xl) < 220) and (340 < (y - yl) < 370):
-                    Saves('w')
-                    gamerun = False
-                if event.button == 1 and (90 < (x - xl) < 220) and ((290 < (y - yl) < 320) or (240 < (y - yl) < 270)):
-                    future = True
-                    menu = False
     elif lvl:
         if not is_hero:
+            # создаем необходимые спрайты
             is_hero = True
             floor = Floor(all_sprites)
             walls = Walls(all_sprites)
             spikes = Spikes(all_sprites, traps)
-            hero = MainHero([load_image("bomzh_vprapo_okonchat0.png"), load_image("bomzh_vprapo_okonchat1.png"),
-                             load_image("bomzh_vprapo_okonchat2.png"), load_image("bomzh_vprapo_okonchat3.png"),
-                             load_image("bomzh_vprapo_okonchat4.png"), load_image("bomzh_vprapo_okonchat5.png"),
-                             load_image("bomzh_vprapo_okonchat6.png"),
-                             load_image("bomzh_vprapo_okonchat7.png")],
-                            [load_image("bomzh_vlevo_okonchat0.png"), load_image("bomzh_vlevo_okonchat1.png"),
-                             load_image("bomzh_vlevo_okonchat2.png"), load_image("bomzh_vlevo_okonchat3.png"),
-                             load_image("bomzh_vlevo_okonchat4.png"), load_image("bomzh_vlevo_okonchat5.png"),
-                             load_image("bomzh_vlevo_okonchat6.png"), load_image("bomzh_vlevo_okonchat7.png")],
-                            [load_image("stait_vlevo00.png"), load_image("stait_vlevo01.png"),
-                             load_image("stait_vlevo02.png"), load_image("stait_vlevo03.png"),
-                             load_image("stait_vlevo04.png"), load_image("stait_vlevo14.png"),
-                             load_image("stait_vlevo15.png"), load_image("stait_vlevo16.png"),
-                             load_image("stait_vlevo17.png")],
-                            [load_image("stait_vpravo00.png"), load_image("stait_vpravo01.png"),
-                             load_image("stait_vpravo02.png"), load_image("stait_vpravo03.png"),
-                             load_image("stait_vpravo04.png"), load_image("stait_vpravo14.png"),
-                             load_image("stait_vpravo15.png"), load_image("stait_vpravo16.png"),
-                             load_image("stait_vpravo17.png")],
-                            [load_image("bomzh_vlevo_shout0.png"), load_image("bomzh_vlevo_shout1.png"),
-                             load_image("bomzh_vlevo_shout2.png"), load_image("bomzh_vlevo_shout3.png"),
-                             load_image("bomzh_vlevo_shout4.png"), load_image("bomzh_vlevo_shout5.png"),
-                             load_image("bomzh_vlevo_shout6.png"), load_image("bomzh_vlevo_shout7.png")],
-                            [load_image("bomzh_vprapo_shout0.png"), load_image("bomzh_vprapo_shout1.png"),
-                             load_image("bomzh_vprapo_shout2.png"), load_image("bomzh_vprapo_shout3.png"),
-                             load_image("bomzh_vprapo_shout4.png"), load_image("bomzh_vprapo_shout5.png"),
-                             load_image("bomzh_vprapo_shout6.png"),
-                             load_image("bomzh_vprapo_shout7.png")],
-                            [load_image("bomzh_vlevo_kick0.png"), load_image("bomzh_vlevo_kick1.png"),
-                             load_image("bomzh_vlevo_kick2.png"), load_image("bomzh_vlevo_kick3.png"),
-                             load_image("bomzh_vlevo_kick4.png"), load_image("bomzh_vlevo_kick5.png"),
-                             load_image("bomzh_vlevo_kick6.png"), load_image("bomzh_vlevo_kick7.png")],
-                            [load_image("bomzh_vprapo_kick0.png"), load_image("bomzh_vprapo_kick1.png"),
-                             load_image("bomzh_vprapo_kick2.png"), load_image("bomzh_vprapo_kick3.png"),
-                             load_image("bomzh_vprapo_kick4.png"), load_image("bomzh_vprapo_kick5.png"),
-                             load_image("bomzh_vprapo_kick6.png"),
-                             load_image("bomzh_vprapo_kick7.png")],
-                            [load_image("stait_vlevo_shout0.png"), load_image("stait_vlevo_shout1.png"),
-                             load_image("stait_vlevo_shout2.png"), load_image("stait_vlevo_shout3.png"),
-                             load_image("stait_vlevo_shout4.png"), load_image("stait_vlevo_shout5.png"),
-                             load_image("stait_vlevo_shout6.png"), load_image("stait_vlevo_shout7.png"),
-                             load_image("stait_vlevo_shout8.png")],
-                            [load_image("stait_vpravo_shout0.png"), load_image("stait_vpravo_shout1.png"),
-                             load_image("stait_vpravo_shout2.png"), load_image("stait_vpravo_shout3.png"),
-                             load_image("stait_vpravo_shout4.png"), load_image("stait_vpravo_shout5.png"),
-                             load_image("stait_vpravo_shout6.png"), load_image("stait_vpravo_shout7.png"),
-                             load_image("stait_vpravo_shout8.png")],
-                            [load_image("stait_vlevo_kick0.png"), load_image("stait_vlevo_kick1.png"),
-                             load_image("stait_vlevo_kick2.png"), load_image("stait_vlevo_kick3.png"),
-                             load_image("stait_vlevo_kick4.png"), load_image("stait_vlevo_kick5.png"),
-                             load_image("stait_vlevo_kick6.png"), load_image("stait_vlevo_kick7.png"),
-                             load_image("stait_vlevo_kick8.png")],
-                            [load_image("stait_vpravo_kick0.png"), load_image("stait_vpravo_kick1.png"),
-                             load_image("stait_vpravo_kick2.png"), load_image("stait_vpravo_kick3.png"),
-                             load_image("stait_vpravo_kick4.png"), load_image("stait_vpravo_kick5.png"),
-                             load_image("stait_vpravo_kick6.png"), load_image("stait_vpravo_kick7.png"),
-                             load_image("stait_vpravo_kick8.png")],
+            hero = MainHero(*hero_images,
                             (800, 300),
                             all_sprites)
-            for i in manna_upper_coordinates: # рисуем деревья манны
+            for i in manna_upper_coordinates:  # рисуем деревья манны
                 Tree(pygame.transform.scale(load_image("manna_upper.png"), (234, 275)), i, all_sprites, objects)
-            for i in health_upper_coordinates: # рисуем деревья здоровья
+            for i in health_upper_coordinates:  # рисуем деревья здоровья
                 Tree(pygame.transform.scale(load_image("health_upper.png"), (177, 273)), i, all_sprites, objects)
 
         if not (mages_group or enemy_group):  # переход на следующий уровень
@@ -1025,10 +926,10 @@ while gamerun:
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if (event.button == 1) and (hero.manna >= 10) and (pygame.mouse.get_pos()[0] > 100):
                     hero.hero_fire()
-                elif (event.button == 1) and (pygame.mouse.get_pos()[0] < 100): #если кликаем на магазин
+                elif (event.button == 1) and (pygame.mouse.get_pos()[0] < 100):  # если кликаем на магазин
                     y = pygame.mouse.get_pos()[1]
                     n = (y - 10) // 70
-                    if shop[n].price <= hero.gold: # если покупка возможна
+                    if shop[n].price <= hero.gold:  # если покупка возможна
                         hero.gold -= shop[n].price
                         type = shop[n].type
                         if type == "gold":
@@ -1045,11 +946,11 @@ while gamerun:
                             else:
                                 color = Spell_constants.RED
                             flag = False
-                            for element in active_spell: # если такое зелье еще активно, то просто добавляем к времени действия 30 сек
+                            for element in active_spell:  # если такое зелье еще активно, то просто добавляем к времени действия 30 сек
                                 if element.color == color:
                                     element.time += 30
                                     flag = True
-                            if not flag: # иначе, добавляем новый таймер для этого зелья
+                            if not flag:  # иначе, добавляем новый таймер для этого зелья
                                 active_spell.append(Timer(time.time() + 30, color))
                         del shop[n]
 
@@ -1060,30 +961,16 @@ while gamerun:
         all_sprites.draw(screen)
         all_sprites.update(event)
         pygame.draw.rect(screen, (90, 39, 41), (0, 0, 100, 600))
-        for i in range(len(shop)): # для каждого зелья в магазине рисуем его
+        for i in range(len(shop)):  # для каждого зелья в магазине рисуем его
             screen.blit(shop[i].image, (20, 10 + i * 70))
             screen.blit(pygame.font.Font(None, 20).render(str(shop[i].price), 1, (255, 255, 25)),
                         (60, 70 + i * 70))
-        for i in active_spell: #для каждого активного зелья рисуем оставшееся время
+        for i in active_spell:  # для каждого активного зелья рисуем оставшееся время
             screen.blit(pygame.font.Font(None, 20).render(str(int(i.time - time.time())), 1, i.color),
                         (500 - active_spell.index(i) * 40, 20))
             i.update()
 
-
-
-    elif future:
-        screen.fill((0, 0, 0))
-        font = pygame.font.Font(None, 25)
-        screen.blit(font.render('Эта опция появится в будущих версиях.', 1, (255, 0, 0), (0, 0, 0)), (100, 100))
-        screen.blit(font.render('Вернуться в меню.', 1, (255, 0, 0), (0, 0, 0)), (420, 410))
-        pygame.draw.rect(screen, (123, 0, 123), (400, 400, 200, 30), 1)
-        for event in pygame.event.get():
-            if event.type == pygame.MOUSEBUTTONDOWN:
-                x, y = pygame.mouse.get_pos()
-                if event.button == 1 and (400 < x < 600) and (400 < y < 430):
-                    future = False
-                    menu = True
     pygame.display.update()
     pygame.display.flip()
-    clock.tick(fps)
+    clock.tick(FPS)
 pygame.quit()

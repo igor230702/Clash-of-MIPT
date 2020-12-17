@@ -19,6 +19,7 @@ Frases = ['Никто из нас уже не сможет сказать, ка�
 
 # размеры экрана
 SCREENSIZE = WIDTH, HEIGHT = 1000, 600
+#SCREENSIZE = WIDTH, HEIGHT = 1920, 1080
 
 
 class FireBall_constants:
@@ -39,9 +40,10 @@ class Spell_constants:
     fast_motion_herov = 10
     normal_motion_herov = 5
     attack_coef = 2
+
+
 class Tree_constants:
     manna_coords = [(804, 310), (-73, 500)]
     manna_real_coords = [(410, 250), (-430, 447)]
     health_coords = [(1720, 260)]
     health_real_coords = [(1312, 187)]
-
