@@ -908,7 +908,7 @@ while gamerun:
                 Tree(pygame.transform.scale(load_image("health_upper.png"), (177, 273)), i, all_sprites, objects)
 
         if not (mages_group or enemy_group):  # переход на следующий уровень
-            for i in range(lvl_num):
+            for i in range(lvl_num + 3):
                 Enemy(load_image("bloody_zombie-NESW.png"), 3, 4, all_sprites, enemy_group)
                 Mage(pygame.transform.scale(load_image("mage-NESW.png"), (150, 200)), 3, 4, all_sprites, mages_group)
                 lvl_num += 1

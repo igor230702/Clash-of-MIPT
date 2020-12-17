@@ -7,7 +7,7 @@ SCREENSIZE = WIDTH, HEIGHT = 1000, 600
 
 
 class FireBall_constants:
-    v = 8  # скорость фаерболла
+    v = 12 # скорость фаерболла
 
 class MainHero_constants:
     gold = 100
@@ -17,7 +17,7 @@ class MainHero_constants:
 
 
 class MageFireBall_constants:
-    v = 8  # скорость фаерболла
+    v = 12  # скорость фаерболла
     damage = 5  # урон фаерболла
 
 
