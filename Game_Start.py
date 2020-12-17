@@ -8,7 +8,7 @@ from config import FPS
 
 # проверка связи
 pygame.init()
-screen = pygame.display.set_mode(SCREENSIZE)  # , pygame.FULLSCREEN
+screen = pygame.display.set_mode(SCREENSIZE)
 clock = pygame.time.Clock()
 pygame.display.set_caption('Super Game')
 manna_upper_coordinates = Tree_constants.manna_coords
@@ -998,6 +998,7 @@ while gamerun:
             i.update()
 
     elif gameover:
+        # смэрть
         screen.fill((0, 0, 0))
         screen.blit(pygame.font.Font(None, 40).render('Game over', 1, (255, 0, 0), (0, 0, 0)), (WIDTH / 2 - 60, 100))
         screen.blit(pygame.font.Font(None, 30).render('Kills: ' + str(hero.kills), 1, (255, 0, 0)),
