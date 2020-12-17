@@ -21,15 +21,15 @@ def load_image(name):
     return pygame.image.load('data/' + name)
 
 
-# def music(name, volume=1):
-#     if name[-3:] == 'mp3':
-#         pygame.mixer.music.load('data/' + name)
-#         pygame.mixer.music.play()
-#         pygame.mixer.music.set_volume(volume)
-#     elif name[-3:] == 'ogg' or name[-3:] == 'wav':
-#         return pygame.mixer.Sound('data/' + name)
-#     else:
-#         print('error sound')
+def music(name, volume=1):
+    if name[-3:] == 'mp3':
+        pygame.mixer.music.load('data/' + name)
+        pygame.mixer.music.play()
+        pygame.mixer.music.set_volume(volume)
+    elif name[-3:] == 'ogg' or name[-3:] == 'wav':
+        return pygame.mixer.Sound('data/' + name)
+    else:
+        print('error sound')
 
 
 def static_labels():
@@ -759,7 +759,7 @@ walls = load_image('стены_1(new).png')
 x_fon, y_fon = 23, 45
 x_walls, y_walls = 0, 0
 is_hero = False
-
+music("Mick Gordon - At Doom's Gate.mp3")
 is_shield_timer = True  # включен ли щит
 fixed_hero_health = 0  # уровень здоровья при включеннном щите
 
