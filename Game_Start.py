@@ -3,17 +3,17 @@ import random
 import math
 import time
 
-from constants import LABELS, Frases, SCREENSIZE, WIDTH, HEIGHT, FireBall_constants, MageFireBall_constants
+from constants import LABELS, Frases, SCREENSIZE, WIDTH, HEIGHT, FireBall_constants, MageFireBall_constants, Spell_constants, Tree_constants
 
 # проверка связи
 pygame.init()
 screen = pygame.display.set_mode(SCREENSIZE)  # , pygame.FULLSCREEN
 clock = pygame.time.Clock()
 pygame.display.set_caption('Super Game')
-manna_upper_coordinates = [(804, 310), (-73, 500)]
-health_upper_coordinates = [(1720, 260)]
-manna_upper_real_coordinates = [(410, 250), (-430, 447)]
-health_upper_real_coordinates = [(1312, 187)]
+manna_upper_coordinates = Tree_constants.manna_coords
+health_upper_coordinates = Tree_constants.health_coords
+manna_upper_real_coordinates = Tree_constants.manna_real_coords
+health_upper_real_coordinates = Tree_constants.health_real_coords
 
 
 def load_image(name):
@@ -470,29 +470,27 @@ class MainHero(pygame.sprite.Sprite):
         super().__init__(*groups)
         self.frames_right = frames_right
         self.frames_left = frames_left
-        self.frames_stand_left = frames_stand_left
-        self.frames_stand_right_shouting = frames_stand_right_shouting
-        self.frames_stand_left_shouting = frames_stand_left_shouting
-        self.frames_stand_right_kick = frames_stand_right_kick
-        self.frames_stand_left_kick = frames_stand_left_kick
-        self.frames_stand_right = frames_stand_right
-        self.frames_right_shouting = frames_right_shouting
-        self.frames_left_shouting = frames_left_shouting
-        self.frames_right_kicking = frames_right_kicking
-        self.frames_left_kicking = frames_left_kicking
+        self.frames_stand_left = frames_stand_left #кадры застоя влево
+        self.frames_stand_right_shouting = frames_stand_right_shouting #кадры стрельбы вправо стоя
+        self.frames_stand_left_shouting = frames_stand_left_shouting #кадры стрельбы влево стоя
+        self.frames_stand_right_kick = frames_stand_right_kick #кадры удара вправо стоя
+        self.frames_stand_left_kick = frames_stand_left_kick #кадры удара вправо стоя
+        self.frames_stand_right = frames_stand_right #кадры застоя вправо
+        self.frames_right_shouting = frames_right_shouting #кадры выстрела вправо
+        self.frames_left_shouting = frames_left_shouting #кадры выстрела влево
+        self.frames_right_kicking = frames_right_kicking #кадры удара вправо
+        self.frames_left_kicking = frames_left_kicking #кадры удара влево
         self.cur_frame = 0
         self.frame_count = 0
         self.gold = 100
         self.kills = 0
-        self.attack_coef = 1
+        self.attack_coef = 1 # множитель при нанесении урона
         self.image = self.frames_right[self.cur_frame]
         self.rect = self.image.get_rect()
         self.rect.x = start_pos[0]
         self.rect.y = start_pos[1]
         self.realx = self.realy = 0
         self.mask = pygame.mask.from_surface(self.image)
-        # self.mask = pygame.mask.from_surface(pygame.Surface((self.rect.width, self.rect.height), pygame.SRCALPHA))
-        # self.mask = self.rect
         self.vector = 1
         # скорость гг
         self.v = 5
@@ -519,11 +517,11 @@ class MainHero(pygame.sprite.Sprite):
 
         screen.blit(pygame.font.Font(None, 30).render('Kills: ' + str(self.kills), 1, (255, 0, 0)), (WIDTH - 240, 20))
         screen.blit(pygame.font.Font(None, 30).render('Gold: ' + str(self.gold), 1, (255, 211, 25)), (WIDTH - 240, 40))
-        if pygame.mouse.get_pressed()[0] and (self.manna >= 10) and (pygame.mouse.get_pos()[0] > 100):
+        if pygame.mouse.get_pressed()[0] and (self.manna >= 10) and (pygame.mouse.get_pos()[0] > 100): # проверка на стрельбу
             self.is_shouting = True
         else:
             self.is_shouting = False
-        if buttons[pygame.K_e] and (self.manna >= 5):
+        if buttons[pygame.K_e] and (self.manna >= 5): # проверка на удар
             self.is_kicking = True
         else:
             self.is_kicking = False
@@ -561,10 +559,10 @@ class MainHero(pygame.sprite.Sprite):
 
         if self.frame_count % 5 == 0:
             hero.change_manna(0.2)
-            for i in manna_upper_real_coordinates:
+            for i in manna_upper_real_coordinates: #вблизи ли герой дерева подъема манны
                 if ((hero.realx) - (i[0])) ** 2 + ((hero.realy) - (i[1])) ** 2 < 10000:
                     hero.change_manna(0.5)
-            for i in health_upper_real_coordinates:
+            for i in health_upper_real_coordinates: #вблизи ли герой дерева подъема здоровья
                 if ((hero.realx) - (i[0])) ** 2 + ((hero.realy) - (i[1])) ** 2 < 10000:
                     hero.change_health(0.5)
 
@@ -734,6 +732,7 @@ class Walls(pygame.sprite.Sprite):
 
 
 class Tree(pygame.sprite.Sprite):
+    '''Класс рисуемых деревьев, могут стоять'''
     def __init__(self, tree_image, coords, *groups):
         super().__init__(*groups)
         self.image = tree_image
@@ -773,7 +772,7 @@ class Camera:
     def apply(self, obj):
         obj.rect.x += self.dx
         obj.rect.y += self.dy
-        if obj is hero:
+        if obj is hero: #пересчитываем координаты героя в базисе карты/мира
             hero.realx -= self.dx
             hero.realy -= self.dy
 
@@ -828,11 +827,15 @@ x_walls, y_walls = 0, 0
 future = False
 is_hero = False
 
-is_shield_timer = True
-fixed_hero_health = 0
+is_shield_timer = True # включен ли щит
+fixed_hero_health = 0 # уровень здоровья при включеннном щите
 
 
 class Timer:
+    '''Класс таймер. Визуализирует оставшееся время действия зелья.
+    time - оставшееся время
+    color - тип таймера, и его цвет
+    def update - обновляем таймер и проверяем нужно ли продолжать применять зелье'''
     def __init__(self, time, color):
         self.time = time
         self.color = color
@@ -840,51 +843,54 @@ class Timer:
     def update(self):
         global is_shield_timer, fixed_hero_health
         if self.time < time.time():
-            if self.color == (20, 20, 255):
+            # если время вышло - восстанавливаем изменения
+            if self.color == Spell_constants.BLUE:
                 for i in enemy_group:
                     i.alpha = 1
                 for i in mages_group:
                     i.alpha = 1
-            elif self.color == (240, 240, 240):
+            elif self.color == Spell_constants.WHITE:
                 is_shield_timer = True
-            elif self.color == (40, 20, 240):
-                hero.v = 5
-            elif self.color == (240, 30, 30):
+            elif self.color == Spell_constants.GREEN:
+                hero.v = Spell_constants.normal_motion_herov
+            elif self.color == Spell_constants.RED:
                 hero.attack_coef = 1
             active_spell.remove(self)
             del self
         else:
-            if self.color == (20, 20, 255):
+            # если время еще не вышло - применяем изменения
+            if self.color == Spell_constants.BLUE:
                 for i in enemy_group:
-                    i.alpha = 0.25
+                    i.alpha = Spell_constants.slow_motion_alpha #замедляем врагов
                 for i in mages_group:
-                    i.alpha = 0.25
-            elif self.color == (40, 20, 240):
-                hero.v = 10
-            elif self.color == (240, 240, 240):
+                    i.alpha = Spell_constants.slow_motion_alpha #замедляем магов
+            elif self.color == Spell_constants.GREEN:
+                hero.v = Spell_constants.fast_motion_herov # ускоряем героя
+            elif self.color == Spell_constants.WHITE:
                 if is_shield_timer:
-                    fixed_hero_health = hero.health
+                    fixed_hero_health = hero.health # узнаем уровень здоровья врага и фиксируем
                     is_shield_timer = False
                 if not is_shield_timer:
                     hero.health = fixed_hero_health
-            elif self.color == (240, 30, 30):
-                hero.attack_coef = 2
+            elif self.color == Spell_constants.RED:
+                hero.attack_coef = Spell_constants.attack_coef  # увеличиваем урон
 
 
 class Spell:
+    '''Класс зелье. Хранит информацию в себе о зелье. Объекты класса содержатся в магазине.'''
     def __init__(self, image, price, type):
         self.image = image
         self.price = price
         self.type = type
 
 
-active_spell = []
+active_spell = [] # примененные зелья
 possible_spells = [Spell(load_image('spell.png'), 50, "gold"), Spell(load_image('fspell.png'), 20, "freeze"),
                    Spell(load_image('shield.png'), 20, "shield"), Spell(load_image('hspell.png'), 40, "health"),
-                   Spell(load_image('sspell.png'), 20, "speed"), Spell(load_image('rspell.png'), 30, "rage")]
+                   Spell(load_image('sspell.png'), 20, "speed"), Spell(load_image('rspell.png'), 30, "rage")] # весь ассортимент зелий
 shop = [Spell(load_image('spell.png'), 50, "gold"), Spell(load_image('fspell.png'), 20, "freeze"),
         Spell(load_image('shield.png'), 20, "shield"), Spell(load_image('hspell.png'), 40, "health"),
-        Spell(load_image('sspell.png'), 20, "speed"), Spell(load_image('rspell.png'), 30, "rage")]
+        Spell(load_image('sspell.png'), 20, "speed"), Spell(load_image('rspell.png'), 30, "rage")] # зелья в магазине
 
 while gamerun:
     font = pygame.font.Font(None, 20)
@@ -997,9 +1003,9 @@ while gamerun:
                              load_image("stait_vpravo_kick8.png")],
                             (800, 300),
                             all_sprites)
-            for i in manna_upper_coordinates:
+            for i in manna_upper_coordinates: # рисуем деревья манны
                 Tree(pygame.transform.scale(load_image("manna_upper.png"), (234, 275)), i, all_sprites, objects)
-            for i in health_upper_coordinates:
+            for i in health_upper_coordinates: # рисуем деревья здоровья
                 Tree(pygame.transform.scale(load_image("health_upper.png"), (177, 273)), i, all_sprites, objects)
 
         if not (mages_group or enemy_group):  # переход на следующий уровень
@@ -1019,10 +1025,10 @@ while gamerun:
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if (event.button == 1) and (hero.manna >= 10) and (pygame.mouse.get_pos()[0] > 100):
                     hero.hero_fire()
-                elif (event.button == 1) and (pygame.mouse.get_pos()[0] < 100):
+                elif (event.button == 1) and (pygame.mouse.get_pos()[0] < 100): #если кликаем на магазин
                     y = pygame.mouse.get_pos()[1]
                     n = (y - 10) // 70
-                    if shop[n].price <= hero.gold:
+                    if shop[n].price <= hero.gold: # если покупка возможна
                         hero.gold -= shop[n].price
                         type = shop[n].type
                         if type == "gold":
@@ -1031,19 +1037,19 @@ while gamerun:
                             hero.health = 100
                         else:
                             if type == "freeze":
-                                color = (20, 20, 255)
+                                color = Spell_constants.BLUE
                             elif type == "shield":
-                                color = (240, 240, 240)
+                                color = Spell_constants.WHITE
                             elif type == "speed":
-                                color = (40, 20, 240)
+                                color = Spell_constants.GREEN
                             else:
-                                color = (240, 30, 30)
+                                color = Spell_constants.RED
                             flag = False
-                            for element in active_spell:
+                            for element in active_spell: # если такое зелье еще активно, то просто добавляем к времени действия 30 сек
                                 if element.color == color:
                                     element.time += 30
                                     flag = True
-                            if not flag:
+                            if not flag: # иначе, добавляем новый таймер для этого зелья
                                 active_spell.append(Timer(time.time() + 30, color))
                         del shop[n]
 
@@ -1054,11 +1060,11 @@ while gamerun:
         all_sprites.draw(screen)
         all_sprites.update(event)
         pygame.draw.rect(screen, (90, 39, 41), (0, 0, 100, 600))
-        for i in range(len(shop)):
+        for i in range(len(shop)): # для каждого зелья в магазине рисуем его
             screen.blit(shop[i].image, (20, 10 + i * 70))
             screen.blit(pygame.font.Font(None, 20).render(str(shop[i].price), 1, (255, 255, 25)),
                         (60, 70 + i * 70))
-        for i in active_spell:
+        for i in active_spell: #для каждого активного зелья рисуем оставшееся время
             screen.blit(pygame.font.Font(None, 20).render(str(int(i.time - time.time())), 1, i.color),
                         (500 - active_spell.index(i) * 40, 20))
             i.update()
