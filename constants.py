@@ -37,3 +37,17 @@ class Tree_constants:
     manna_real_coords = [(410, 250), (-430, 447)]
     health_coords = [(1720, 260)]
     health_real_coords = [(1312, 187)]
+
+class Enemy_constants():
+    v = 4  # скорость зомби
+    health = 10  # его здоровье
+    damage = 0.2  # наносимый урон
+    slowing = 1  # коэффициент замедления от зелья
+    RED = (255, 0, 0)  # цвет полоски здоровья
+
+
+class Mage_constants():
+    v = 4
+    health = 10  # его здоровье
+    damage = 0.2  # наносимый урон
+    slowing = 1  # коэффициент замедления от зелья

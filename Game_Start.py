@@ -8,7 +8,7 @@ from config import FPS
 
 # проверка связи
 pygame.init()
-screen = pygame.display.set_mode(SCREENSIZE)
+screen = pygame.display.set_mode(SCREENSIZE)  # , pygame.FULLSCREEN
 clock = pygame.time.Clock()
 pygame.display.set_caption('Super Game')
 manna_upper_coordinates = Tree_constants.manna_coords
@@ -80,49 +80,44 @@ class FireBall(pygame.sprite.Sprite):
 
 
 class Enemy(pygame.sprite.Sprite):
-    """Класс врагов ближнего боя. Что умеют:
-    1.получать дамаг от попадания фаерболла,
-    2.бегать за героем, если он находится в радиусе видимости
-    3.не объединяются в одного power-ranger-скелета"""
+    """Класс зомби - врагов ближнего боя. Что умеют:
+    1. получать урон от главного героя
+    2. бегать за героем, если он находится в радиусе видимости
+    3. наносить урон при касании"""
 
     def __init__(self, sheet, columns, rows, *groups):
         super().__init__(*groups)
-        # скорость врага
-        self.v = 0
-        # коэффициент замедление от зелья
-        self.alpha = 1
-
-        # списки для харнения кадров анимаций
+        # списки для харнения кадров анимаций:
         self.frames_right = []
         self.frames_left = []
         self.frames_up = []
         self.frames_down = []
+
         self.cut_sheet(sheet, columns, rows)
         self.cur_frame = 0
+        self.frame_count = 0
         self.image = self.frames_right[self.cur_frame]
-
-        self.rect = self.image.get_rect()
-        w = self.rect.w
-        h = self.rect.h
         self.mask = pygame.mask.from_surface(self.image)
+        self.rect = self.image.get_rect()
 
+        self.slowing = Enemy_constants.slowing  # коэффициент замедления от зелья
+        self.health = Enemy_constants.health  # здоровье зомби
+        self.damage = Enemy_constants.damage  # урон, который наносят зомби
+        self.stand = True # проверка на застой
+
+        # случайное появление зомби:
         while True:
-            self.rect.x = random.randint(walls.rect.x + w, walls.rect.x + walls.mask.get_size()[0] - w)
-            self.rect.y = random.randint(walls.rect.y + h, walls.rect.y + walls.mask.get_size()[1] - h)
+            self.rect.x = random.randint(walls.rect.x + self.rect.w, walls.rect.x + walls.mask.get_size()[0] - self.rect.w)
+            self.rect.y = random.randint(walls.rect.y + self.rect.h, walls.rect.y + walls.mask.get_size()[1] - self.rect.h)
             if not pygame.sprite.collide_mask(self, walls):
                 break
 
-        self.vector = 1
-        self.frame_count = 0
-        self.health = 10
-        self.damage = 0.2
-        # проверка на застой
-        self.stand = True
-
     def cut_sheet(self, sheet, columns, rows):
+        '''
+        Данная функция добавляет кадры для прорисовки зомби.
+        '''
         self.rect = pygame.Rect(0, 0, sheet.get_width() // columns,
                                 sheet.get_height() // rows)
-
         for j in range(rows):
             for i in range(columns):
                 frame_location = (self.rect.w * i, self.rect.h * j)
@@ -140,6 +135,10 @@ class Enemy(pygame.sprite.Sprite):
                         frame_location, self.rect.size)))
 
     def change_health(self, value):
+        '''
+        Данная функция изменяет здоровье зомби на величину value, ведёт счётчик убийств главного героя и считает
+        накопленное золото за убийство зомби. Если здоровье опускается до нуля, зомби умирает.
+        '''
         self.health += value
         if self.health <= 0:
             self.kill()
@@ -147,70 +146,76 @@ class Enemy(pygame.sprite.Sprite):
             hero.kills += 1
 
     def update(self, *args):
-        # при попадании фаерболаа враг умирает
+        '''
+        Данная функция обновляет с каждым кадром всё, что должно происходить с зомби: движение, нанесение урона и т. д.
+        '''
+        #  при попадании фаербола зомби умирает:
         for elem in fireballs:
             if self.rect.colliderect(elem):
                 elem.kill()
                 self.change_health(int(-5 * hero.attack_coef))
 
-        # наносим урон герою
+        #  нанесение урона герою при касании:
         if self.rect.colliderect(hero):
             hero.change_health(-self.damage)
             if hero.is_kicking:
-                self.change_health(-0.3 * hero.attack_coef)
-        # движение врагов
-        lx = self.rect.x - hero.rect.x
-        ly = self.rect.y - hero.rect.y
-        l = lx ** 2 + ly ** 2
-        if l < 400 ** 2 and not self.rect.colliderect(hero):
-            self.v = int(4 * self.alpha)
-            # задаем 4 возможных направления передвижений зомби
+                self.change_health(int(-1 * hero.attack_coef))
+
+        #  движение зомби:
+        distance_to_hero_x = self.rect.x - hero.rect.x
+        distance_to_hero_y = self.rect.y - hero.rect.y
+        distance_to_hero = distance_to_hero_x ** 2 + distance_to_hero_y ** 2  # квадрат расстояния до героя
+        if distance_to_hero < 400 ** 2 and not self.rect.colliderect(hero):
+            self.v = int(Enemy_constants.v * self.slowing)
+            #  задаем 4 возможных направления передвижения зомби (значения vector:
+            #  1 - вправо, 2 - влево, 3 - вверх, 4 - вниз):
             x1 = {"vector": 1,
-                  "dx": min(self.v, abs(lx)),
+                  "dx": min(self.v, abs(distance_to_hero_x)),
                   "dy": 0}
             x2 = {"vector": 2,
-                  "dx": -min(self.v, abs(lx)),
+                  "dx": -min(self.v, abs(distance_to_hero_x)),
                   "dy": 0}
             y1 = {"vector": 3,
                   "dx": 0,
-                  "dy": min(self.v, abs(ly))}
+                  "dy": min(self.v, abs(distance_to_hero_y))}
             y2 = {"vector": 4,
                   "dx": 0,
-                  "dy": -min(self.v, abs(ly))}
+                  "dy": -min(self.v, abs(distance_to_hero_y))}
             ways = [0, 0]
 
-            if lx > 0:
+            if distance_to_hero_x > 0:
                 ways[0] = x2
-            elif lx != 0:
+            elif distance_to_hero_x != 0:
                 ways[0] = x1
-            if ly > 0:
+            if distance_to_hero_y > 0:
                 ways[1] = y2
-            elif ly != 0:
+            elif distance_to_hero_y != 0:
                 ways[1] = y1
-            if abs(ly) > abs(lx):
+            if abs(distance_to_hero_y) > abs(distance_to_hero_x):
                 ways.reverse()
 
             for d in ways:
                 if d != 0:
-                    # выбираем путь наименьшей длины
+                    #  выбираем путь наименьшей длины:
                     self.rect.x += d["dx"]
                     self.rect.y += d["dy"]
                     zomb_collision = False
                     for enemy in enemy_group:
+                        #  проверка на столкновение зомби:
                         if enemy != self and pygame.sprite.collide_mask(self, enemy):
                             zomb_collision = True
                             break
-                    if pygame.sprite.collide_mask(self, walls) or zomb_collision:  # проверяем его на пригодность
-                        # если зомби зомби пересек спрайт стены, то отменяем действие
+                    if pygame.sprite.collide_mask(self, walls) or zomb_collision:
+                        #  если зомби зомби пересек спрайт стены или столкнулся со своим, то отменяем действие:
                         self.rect.x -= d["dx"]
                         self.rect.y -= d["dy"]
                     else:
-                        # выходим, когда такое перемещение найдено
+                        #  выходим, когда такое перемещение найдено:
                         self.vector = d["vector"]
                         self.stand = False
                         break
 
-        # обновляем картинки зомби
+        #  обновляем картинки зомби:
         if self.frame_count % 5 == 0 and not self.stand:
             self.cur_frame = (self.cur_frame + 1) % len(self.frames_right)
             if self.vector == 1:
@@ -222,49 +227,50 @@ class Enemy(pygame.sprite.Sprite):
             elif self.vector == 4:
                 self.image = self.frames_up[self.cur_frame]
         self.frame_count += 1
-        # отрисовываем полоску здоровья
-        pygame.draw.rect(screen, (255, 0, 0), (self.rect.x, self.rect.y, 5 * int(self.health), 5))
+
+        #  отрисовываем полоску здоровья:
+        pygame.draw.rect(screen, Enemy_constants.RED, (self.rect.x, self.rect.y, 5 * int(self.health), 5))
 
         self.stand = True
 
 
 class Mage(pygame.sprite.Sprite):
-    """Класс магов. Что умеют:
-        1.получать дамаг от попадания фаерболла,
-        2.бегать за героем, даржась на дистанции от него; стрелять в героя фаерболлами
-        3.не объединяются в одного power-ranger-мага"""
+    """Класс магов - врагов дальнего боя. Что умеют:
+    1. получать урон от главного героя
+    2. бегать за героем, если он находится в радиусе видимости и отбегать от него, если тот находится слишком близко
+    3. наносить урон огненными шарами"""
 
     def __init__(self, sheet, columns, rows, *groups):
         super().__init__(*groups)
-        # скорость врага
-        self.v = 0
-        # коэффициент замедления
-        self.alpha = 1
+        # списки для харнения кадров анимаций:
         self.frames_right = []
         self.frames_left = []
         self.frames_up = []
         self.frames_down = []
+
         self.cut_sheet(sheet, columns, rows)
         self.cur_frame = 0
+        self.frame_count = 0
         self.image = self.frames_right[self.cur_frame]
         self.mask = pygame.mask.from_surface(self.image)
         self.rect = self.image.get_rect()
-        w = self.rect.w
-        h = self.rect.h
 
+        self.slowing = Enemy_constants.slowing  # коэффициент замедления от зелья
+        self.health = Mage_constants.health  # здоровье мага
+        self.damage = Mage_constants.damage  # урон, который наносят маги
+        self.stand = True  # проверка на застой
+
+        # случайное появление магов на карте:
         while True:
-            self.rect.x = random.randint(walls.rect.x + w, walls.rect.x + walls.mask.get_size()[0] - w)
-            self.rect.y = random.randint(walls.rect.y + h, walls.rect.y + walls.mask.get_size()[1] - h)
+            self.rect.x = random.randint(walls.rect.x + self.rect.w, walls.rect.x + walls.mask.get_size()[0] - self.rect.w)
+            self.rect.y = random.randint(walls.rect.y + self.rect.h, walls.rect.y + walls.mask.get_size()[1] - self.rect.h)
             if not pygame.sprite.collide_mask(self, walls):
                 break
 
-        self.vector = 1
-        self.frame_count = 0
-        self.health = 10
-        # проверка на застой
-        self.stand = True
-
     def cut_sheet(self, sheet, columns, rows):
+        '''
+        Данная функция добавляет кадры для прорисовки мага.
+        '''
         self.rect = pygame.Rect(0, 0, sheet.get_width() // columns,
                                 sheet.get_height() // rows)
 
@@ -285,6 +291,10 @@ class Mage(pygame.sprite.Sprite):
                         frame_location, self.rect.size)))
 
     def change_health(self, value):
+        '''
+        Данная функция изменяет здоровье магов на величину value, ведёт счётчик убийств главного героя и считает
+        накопленное золото за убийство магов. Если здоровье опускается до нуля, маг умирает.
+        '''
         self.health += value
         if self.health <= 0:
             self.kill()
@@ -294,22 +304,28 @@ class Mage(pygame.sprite.Sprite):
                 shop.append(random.choice(possible_spells))
 
     def update(self, *args):
+        '''
+        Данная функция обновляет всё, что связано с магами: здоровье, движение и т. д.
+        '''
         for elem in fireballs:
+            # нанесение урона огненными шарами:
             if self.rect.colliderect(elem):
                 elem.kill()
                 self.change_health(int(-5 * hero.attack_coef))
         if self.rect.colliderect(hero):
+            #  нанесение урона героем
             if hero.is_kicking:
-                self.change_health(-0.3 * hero.attack_coef)
+                self.change_health(int(-1 * hero.attack_coef))
 
-        # движение врагов
-        lx = self.rect.x - hero.rect.x
-        ly = self.rect.y - hero.rect.y
-        l = lx ** 2 + ly ** 2
-        far = 200 ** 2 < l < 400 ** 2
-        near = l < 180 ** 2
+        # движение магов:
+        distance_to_hero_x = self.rect.x - hero.rect.x
+        distance_to_hero_y = self.rect.y - hero.rect.y
+        distance_to_hero = distance_to_hero_x ** 2 + distance_to_hero_y ** 2  # квадрат расстояния до героя
+        far = distance_to_hero > 200 ** 2 and distance_to_hero < 400 ** 2
+        near = distance_to_hero < 180 ** 2
+        #  задаем 4 возможных направления передвижения мага:
         if far or near:
-            self.v = int(4 * self.alpha)
+            self.v = int(Mage_constants.v * self.slowing)
             x1 = {"vector": 1,
                   "dx": self.v,
                   "dy": 0}
@@ -324,36 +340,37 @@ class Mage(pygame.sprite.Sprite):
                   "dy": -self.v}
             ways = [0, 0]
 
-            if lx > 0 and far or lx < 0 and near:
+            if distance_to_hero_x > 0 and far or distance_to_hero_x < 0 and near:
                 ways[0] = x2
             else:
                 ways[0] = x1
-            if ly > 0 and far or ly < 0 and near:
+            if distance_to_hero_y > 0 and far or distance_to_hero_y < 0 and near:
                 ways[1] = y2
             else:
                 ways[1] = y1
-            if (abs(ly) > abs(lx)) == far:
+            if (abs(distance_to_hero_y) > abs(distance_to_hero_x)) == far:
                 ways.reverse()
 
             for d in ways:
                 self.rect.x += d["dx"]
                 self.rect.y += d["dy"]
-                zomb_collision = False
-                for mag in mages_group:
-                    if mag != self and pygame.sprite.collide_mask(self, mag):
-                        zomb_collision = True
+                mage_collision = False
+                for mage in mages_group:
+                    #  проверка на столкновение магов друг с другом:
+                    if (mage != self and pygame.sprite.collide_mask(self, mage)):
+                        mage_collision = True
                         break
-                if pygame.sprite.collide_mask(self, walls) or zomb_collision:  # проверяем его на пригодность
-                    # если зомби зомби пересек спрайт стены, то отменяем действие
+                if pygame.sprite.collide_mask(self, walls) or mage_collision:
+                    #  если маг пересек спрайт стены, то отменяем действие:
                     self.rect.x -= d["dx"]
                     self.rect.y -= d["dy"]
                 else:
-                    # выходим, когда такое перемещение найдено
+                    #  выходим, когда такое перемещение найдено:
                     self.vector = d["vector"]
                     self.stand = False
                     break
 
-        # обновляем картинки зомби
+        # обновляем картинки магов:
         if self.frame_count % 5 == 0 and not self.stand:
             self.cur_frame = (self.cur_frame + 1) % len(self.frames_right)
             if self.vector == 1:
@@ -365,13 +382,15 @@ class Mage(pygame.sprite.Sprite):
             elif self.vector == 4:
                 self.image = self.frames_up[self.cur_frame]
         self.frame_count += 1
-        # отрисовываем полоску здоровья
-        pygame.draw.rect(screen, (255, 0, 0), (self.rect.x, self.rect.y, 5 * int(self.health), 5))
+        # отрисовываем полоску здоровья:
+        pygame.draw.rect(screen, Enemy_constants.RED, (self.rect.x, self.rect.y, 5 * int(self.health), 5))
 
         self.stand = True
 
     def fire(self):
-        # этот кусок кода нужен для определения угла выстрела (магом в сторону героя)
+        '''
+        Данная функция определяет угол, под которым стреляет маг, и заставляет его стрелять
+        '''
         x, y = hero.rect.x, hero.rect.y
         if y - self.rect.y > 0 and x - self.rect.x > 0:
             tan = (y - self.rect.y) / (x - self.rect.x)
