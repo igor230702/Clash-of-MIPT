@@ -23,7 +23,7 @@ def load_image(name):
     return pygame.image.load('data/' + name)
 
 
-def music(name, volume=1):
+def music(name, volume=0.1):
     if name[-3:] == 'mp3':
         pygame.mixer.music.load('data/' + name)
         pygame.mixer.music.play(-1)
@@ -36,11 +36,11 @@ def music(name, volume=1):
 
 def static_labels():
     font = pygame.font.Font(None, 25)
-    screen.blit(font.render(LABELS[0], 1, (255, 255, 255), (0, 0, 0)), (450, 100))
+    screen.blit(font.render(LABELS[0], 1, (255, 255, 255)), (450, 100))
     pygame.draw.rect(screen, (123, 0, 123), (435, 90, 150, 30), 1)
-    screen.blit(font.render(LABELS[1], 1, (255, 255, 255), (0, 0, 0)), (100 + xl, 150 + yl))
+    screen.blit(font.render(LABELS[1], 1, (255, 255, 255)), (100 + xl, 150 + yl))
     pygame.draw.rect(screen, (123, 0, 123), (90 + xl, 140 + yl, 130, 30), 1)
-    screen.blit(font.render(LABELS[2], 1, (255, 255, 255), (0, 0, 0)), (100 + xl, 350 + yl))
+    screen.blit(font.render(LABELS[2], 1, (255, 255, 255)), (100 + xl, 350 + yl))
     pygame.draw.rect(screen, (123, 0, 123), (90 + xl, 340 + yl, 130, 30), 1)
 
 
@@ -903,6 +903,8 @@ while gamerun:
                     # dialog = True
                     lvl = True
                     menu = False
+                if event.button == 1 and (90 < (x - xl) < 220) and (340 < (y - yl) < 370):
+                    gamerun = False
     elif lvl:
         if not is_hero:
             all_sprites = pygame.sprite.Group()
@@ -929,7 +931,7 @@ while gamerun:
                 Tree(pygame.transform.scale(load_image("health_upper.png"), (177, 273)), i, all_sprites, objects)
 
         if not (mages_group or enemy_group):  # переход на следующий уровень
-            for i in range(lvl_num + 3):
+            for i in range(3 * lvl_num):
                 Enemy(load_image("bloody_zombie-NESW.png"), 3, 4, all_sprites, enemy_group)
                 Mage(pygame.transform.scale(load_image("mage-NESW.png"), (150, 200)), 3, 4, all_sprites, mages_group)
                 lvl_num += 1
