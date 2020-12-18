@@ -16,6 +16,8 @@ health_upper_coordinates = Tree_constants.health_coords
 manna_upper_real_coordinates = Tree_constants.manna_real_coords
 health_upper_real_coordinates = Tree_constants.health_real_coords
 
+sasuke_sound = pygame.mixer.Sound("data/sasuke.wav")
+fireball_sound = pygame.mixer.Sound("data/fireball.wav")
 
 def load_image(name):
     return pygame.image.load('data/' + name)
@@ -24,7 +26,7 @@ def load_image(name):
 def music(name, volume=1):
     if name[-3:] == 'mp3':
         pygame.mixer.music.load('data/' + name)
-        pygame.mixer.music.play()
+        pygame.mixer.music.play(-1)
         pygame.mixer.music.set_volume(volume)
     elif name[-3:] == 'ogg' or name[-3:] == 'wav':
         return pygame.mixer.Sound('data/' + name)
@@ -745,8 +747,8 @@ class Camera:
 camera = Camera()
 
 
-# fps = 60
 xl, yl = 0, 50
+sasuke_counter = 0
 
 gamerun = True
 gameover = False
@@ -942,8 +944,14 @@ while gamerun:
                 gamerun = False
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if (event.button == 1) and (hero.manna >= 10) and (pygame.mouse.get_pos()[0] > 100):
+                    if sasuke_counter % 4 == 0:
+                        sasuke_sound.play(0, 0, 0)
+                    else:
+                        fireball_sound.play(0, 0, 0)
                     hero.hero_fire()
-                elif (event.button == 1) and (pygame.mouse.get_pos()[0] < 100):  # если кликаем на магазин
+                    sasuke_counter += 1.
+                elif (event.button == 1) and (pygame.mouse.get_pos()[0] < 100):
+                    # если кликаем на магазин
                     y = pygame.mouse.get_pos()[1]
                     n = (y - 10) // 70
                     if shop[n].price <= hero.gold:  # если покупка возможна
